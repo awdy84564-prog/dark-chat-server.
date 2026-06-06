@@ -185,3 +185,166 @@ function enterApplication() {
         socket.emit('audio_offer', { targetId: data.broadcasterId, sdp: pc.localDescription });
     });
 
+            } else if (slot.userId) {
+                iconEl.innerText = "🗣️"; iconEl.className = "mic-avatar active"; nameEl.innerText = slot.username;
+                if (slot.userId === socket.id) amIOnMic = true;
+            } else {
+                iconEl.innerText = "🎙️"; iconEl.className = "mic-avatar"; nameEl.innerText = `فارغ ${index + 1}`;
+            }
+        });
+        document.getElementById('leave-mic-btn').style.display = amIOnMic ? 'block' : 'none';
+    });
+
+    // ================= استقبال وتنفيذ أوامر البث الصوتي المباشر (المفقودة) =================
+    socket.on('mic_stream_started', async (data) => {
+        const pc = new RTCPeerConnection(rtcConfig);
+        peerConnections[data.broadcasterId] = pc;
+
+        pc.onicecandidate = (event) => {
+            if (event.candidate) {
+                socket.emit('ice_candidate', { targetId: data.broadcasterId, candidate: event.candidate });
+            }
+        };
+
+        pc.ontrack = (event) => {
+            let audioEl = document.getElementById(`audio-${data.broadcasterId}`);
+            if (!audioEl) {
+                audioEl = document.createElement('audio');
+                audioEl.id = `audio-${data.broadcasterId}`;
+                audioEl.autoplay = true;
+                document.getElementById('audio-players-container').appendChild(audioEl);
+            }
+            audioEl.srcObject = event.streams[0];
+        };
+
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        socket.emit('audio_offer', { targetId: data.broadcasterId, sdp: pc.localDescription });
+    });
+
+    socket.on('audio_offer', async (data) => {
+        const pc = peerConnections[data.senderId] || new RTCPeerConnection(rtcConfig);
+        peerConnections[data.senderId] = pc;
+
+        if (localStream) {
+            localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+        }
+
+        pc.onicecandidate = (event) => {
+            if (event.candidate) {
+                socket.emit('ice_candidate', { targetId: data.senderId, candidate: event.candidate });
+            }
+        };
+
+        await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        socket.emit('audio_answer', { targetId: data.senderId, sdp: pc.localDescription });
+    });
+
+    socket.on('audio_answer', async (data) => {
+        const pc = peerConnections[data.senderId];
+        if (pc) {
+            await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+        }
+    });
+
+    socket.on('ice_candidate', async (data) => {
+        const pc = peerConnections[data.senderId];
+        if (pc) {
+            await pc.addIceCandidate(new RTCIceCandidate(data.candidate)).catch(e => console.error(e));
+        }
+    });
+
+    socket.on('mic_stream_stopped', (data) => {
+        closePeerConnection(data.broadcasterId);
+    });
+
+    socket.on('force_leave_mic', () => {
+        leaveMic();
+    });
+}
+
+function appendMessage(data, isSys = false) {
+    const list = document.getElementById('messages-list');
+    const li = document.createElement('li');
+    if(isSys) {
+        li.className = 'msg msg-sys'; li.innerText = data;
+    } else {
+        li.className = 'msg';
+        li.innerHTML = `<strong class="username-clickable" style="color: ${data.color}" onclick="openAdminMenu(event, '${data.id}')">[${data.roleName}] ${data.username}:</strong> <span>${data.text}</span>`;
+    }
+    list.appendChild(li);
+    list.scrollTop = list.scrollHeight;
+}
+
+function sendMessage() {
+    const input = document.getElementById('msg-input');
+    const text = input.value.trim();
+    if(!text || !socket) return;
+    socket.emit('send_chat_msg', text);
+    input.value = '';
+}
+
+function checkEnter(event) { if(event.key === 'Enter') sendMessage(); }
+
+async function handleMicClick(slotId) {
+    if(!socket) return;
+    selectedSlotIdForAdmin = slotId;
+
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        socket.emit('request_mic', slotId);
+    } catch (err) {
+        alert("❌ يرجى السماح بالوصول للمايكروفون للبث الصوتي!");
+        console.error(err);
+    }
+}
+
+function leaveMic() {
+    if (socket) socket.emit('leave_mic');
+    if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+    }
+    Object.keys(peerConnections).forEach(key => closePeerConnection(key));
+}
+
+function closePeerConnection(id) {
+    if (peerConnections[id]) {
+        peerConnections[id].close();
+        delete peerConnections[id];
+    }
+    const audioEl = document.getElementById(`audio-${id}`);
+    if (audioEl) audioEl.remove();
+}
+
+function openAdminMenu(event, targetId) {
+    event.preventDefault();
+    if(targetId === socket.id) return; 
+    selectedUserIdForAdmin = targetId;
+    const menu = document.getElementById('admin-context-menu');
+    menu.style.display = 'flex';
+    menu.style.top = `${event.clientY}px`;
+    menu.style.left = `${event.clientX}px`;
+}
+
+function closeAdminMenu() { document.getElementById('admin-context-menu').style.display = 'none'; }
+
+function executeAdminAction(action) {
+    if (!socket) return;
+    if (action === 'lock_mic' && selectedSlotIdForAdmin !== null) {
+        socket.emit('admin_toggle_mic_lock', selectedSlotIdForAdmin);
+    } else if (selectedUserIdForAdmin) {
+        socket.emit('admin_action', { action: action, targetId: selectedUserIdForAdmin });
+    }
+    closeAdminMenu();
+}
+
+document.addEventListener('click', function(e) {
+    const menu = document.getElementById('admin-context-menu');
+    if (!menu.contains(e.target) && e.target.className !== 'username-clickable') closeAdminMenu();
+});
+</script>
+</body>
+</html>
