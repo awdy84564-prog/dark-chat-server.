@@ -1,7 +1,7 @@
 {
-  "name": "darkchat-v2",
-  "version": "1.0.0",
-  "description": "Dark Chat Server",
+  "name": "lugana-dark-chat",
+  "version": "2.0.0",
+  "description": "LUGANA DARK CHAT - بث صوتي مع صلاحيات كاملة",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
