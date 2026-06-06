@@ -19,18 +19,18 @@ socket.on('request_mic', (slotId) => {
   io.emit('update_mics', micSlots);
   io.emit('sys_broadcast', { text: `🎤 صعد [${ROLES[user.role].name}] ${user.username} على المايك رقم ${slotId + 1}` });
 
-  // 1. اخبر الكل ان في شخص جديد طلع مايك
-  socket.broadcast.to("المضافة العامة").emit('mic_stream_started', {
+  // اخبر الكل ان في شخص جديد طلع مايك
+  socket.broadcast.emit('mic_stream_started', {
     broadcasterId: socket.id,
     slotId: slotId
   });
 
-  // 2. هذا هو السطر الناقص: اخبر الشخص الجديد عن كل الناس اللي على المايك حالياً
-  micSlots.forEach(slot => {
+  // اخبر الشخص الجديد عن كل الناس اللي على المايك حالياً - هذا السطر المصحح
+  micSlots.forEach((slot, index) => {
     if (slot.userId && slot.userId!== socket.id) {
       socket.emit('mic_stream_started', {
         broadcasterId: slot.userId,
-        slotId: slot.slotId
+        slotId: index
       });
     }
   });
