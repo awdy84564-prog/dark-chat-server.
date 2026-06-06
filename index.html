@@ -9,32 +9,32 @@
     :root { --bg-main: #0b0b0b; --bg-card: #161616; --bg-input: #222222; --text-color: #e0e0e0; --accent: #ff3366; }
     body { background-color: var(--bg-main); color: var(--text-color); font-family: 'Segoe UI', Tahoma; margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; }
     #login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; padding: 20px; }
-   .login-box { background: var(--bg-card); padding: 30px; border-radius: 12px; width: 100%; max-width: 360px; box-shadow: 0 8px 24px rgba(0,0,0,0.8); border: 1px solid #222; }
+  .login-box { background: var(--bg-card); padding: 30px; border-radius: 12px; width: 100%; max-width: 360px; box-shadow: 0 8px 24px rgba(0,0,0,0.8); border: 1px solid #222; }
     #app-screen { display: none; flex-direction: column; height: 100vh; }
     header { background: var(--bg-card); padding: 15px; text-align: center; font-weight: bold; font-size: 18px; border-bottom: 1px solid #222; color: var(--accent); }
-   .mics-container { background: #111; padding: 10px; border-bottom: 1px solid #222; display: flex; flex-direction: column; gap: 10px; }
-   .mic-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; justify-items: center; }
-   .mic-slot { display: flex; flex-direction: column; align-items: center; width: 100%; cursor: pointer; background: rgba(255,255,255,0.02); padding: 6px 0; border-radius: 8px; border: 1px solid #222; }
-   .mic-avatar { width: 45px; height: 45px; background: var(--bg-input); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #444; font-size: 20px; }
-   .mic-avatar.active { border-color: #00ffcc; box-shadow: 0 0 8px #00ffcc; animation: pulse-mic 1.5s infinite alternate; }
+  .mics-container { background: #111; padding: 10px; border-bottom: 1px solid #222; display: flex; flex-direction: column; gap: 10px; }
+  .mic-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; justify-items: center; }
+  .mic-slot { display: flex; flex-direction: column; align-items: center; width: 100%; cursor: pointer; background: rgba(255,255,255,0.02); padding: 6px 0; border-radius: 8px; border: 1px solid #222; }
+  .mic-avatar { width: 45px; height: 45px; background: var(--bg-input); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #444; font-size: 20px; }
+  .mic-avatar.active { border-color: #00ffcc; box-shadow: 0 0 8px #00ffcc; animation: pulse-mic 1.5s infinite alternate; }
     @keyframes pulse-mic { 0% { box-shadow: 0 0 4px #00ffcc; } 100% { box-shadow: 0 0 12px #00ffcc; } }
-   .mic-avatar.locked { border-color: #ff3366; background: #301015; }
-   .mic-name { font-size: 11px; margin-top: 4px; color: #aaa; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; width: 90%; text-align: center; }
-   .chat-container { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .mic-avatar.locked { border-color: #ff3366; background: #301015; }
+  .mic-name { font-size: 11px; margin-top: 4px; color: #aaa; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; width: 90%; text-align: center; }
+  .chat-container { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
     #messages-list { flex-grow: 1; padding: 15px; overflow-y: auto; list-style: none; margin: 0; background: #0d0d0d; }
-   .msg { margin-bottom: 10px; line-height: 1.5; font-size: 15px; word-break: break-word; }
-   .username-clickable { cursor: pointer; text-decoration: underline; margin-left: 4px; }
-   .msg-sys { color: #aaa; font-size: 13px; text-align: center; background: rgba(255,255,255,0.04); padding: 6px; border-radius: 4px; margin: 8px auto; max-width: 80%; border: 1px solid #333; }
-   .admin-menu { position: fixed; background: #1e1e1e; border: 1px solid #444; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); display: none; flex-direction: column; z-index: 1000; overflow: hidden; }
-   .admin-menu button { background: transparent; color: white; padding: 10px 20px; border: none; border-bottom: 1px solid #333; text-align: right; width: 100%; font-size: 13px; cursor: pointer; }
-   .admin-menu button:hover { background: #333; }
-   .admin-menu button.close-btn { background: #ff3366; color: white; border: none;}
-   .input-area { background: var(--bg-card); padding: 10px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #222; }
-   .controls-row { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
-   .input-row { display: flex; gap: 8px; }
+  .msg { margin-bottom: 10px; line-height: 1.5; font-size: 15px; word-break: break-word; }
+  .username-clickable { cursor: pointer; text-decoration: underline; margin-left: 4px; }
+  .msg-sys { color: #aaa; font-size: 13px; text-align: center; background: rgba(255,255,255,0.04); padding: 6px; border-radius: 4px; margin: 8px auto; max-width: 80%; border: 1px solid #333; }
+  .admin-menu { position: fixed; background: #1e1e1e; border: 1px solid #444; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); display: none; flex-direction: column; z-index: 1000; overflow: hidden; }
+  .admin-menu button { background: transparent; color: white; padding: 10px 20px; border: none; border-bottom: 1px solid #333; text-align: right; width: 100%; font-size: 13px; cursor: pointer; }
+  .admin-menu button:hover { background: #333; }
+  .admin-menu button.close-btn { background: #ff3366; color: white; border: none;}
+  .input-area { background: var(--bg-card); padding: 10px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #222; }
+  .controls-row { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+  .input-row { display: flex; gap: 8px; }
     input[type="text"], input[type="password"] { background: var(--bg-input); border: 1px solid #333; color: #fff; padding: 12px; border-radius: 6px; font-size: 15px; width: 100%; box-sizing: border-box; }
     button { background: var(--accent); color: white; border: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 15px; }
-   .leave-mic-btn { background: #555; font-size: 12px; padding: 6px 12px; border-radius: 4px; display: none; }
+  .leave-mic-btn { background: #555; font-size: 12px; padding: 6px 12px; border-radius: 4px; display: none; }
   </style>
 </head>
 <body>
@@ -54,7 +54,6 @@
       <input type="password" id="password" placeholder="كلمة السر للمالك فقط"><br><br>
       <button onclick="enterApplication()" style="width: 100%;">دخول غرف الدردشة</button>
     </div>
-  </div>
   <div id="app-screen">
     <header id="room-header">غرفة LUGANA العامة</header>
     <div class="mics-container">
@@ -115,6 +114,12 @@
     const password = document.getElementById('password').value.trim();
     if(!username) return alert("الرجاء كتابة الاسم المستعار!");
     socket = io("https://dark-chat-server.onrender.com");
+
+    // هذا السطر يحل مشكلة الصوت بالاندرويد: لازم كبسة اول
+    document.body.addEventListener('click', () => {
+        document.querySelectorAll('audio').forEach(a => a.play().catch(()=>{}));
+    }, { once: true });
+
     socket.on('connect', () => {
       socket.emit('register_user', { username: username, password: password });
     });
@@ -144,9 +149,18 @@
       });
       document.getElementById('leave-mic-btn').style.display = amIOnMic? 'block' : 'none';
     });
+
+    // هذا التعديل الاساسي: لازم نضيف صوتنا حتى لو مستمعين
     socket.on('mic_stream_started', async (data) => {
+      if (data.broadcasterId === socket.id) return;
       const pc = new RTCPeerConnection(rtcConfig);
       peerConnections[data.broadcasterId] = pc;
+
+      // مهم: اذا عندي مايك بضيفه. اذا ما عندي بعمل stream فاضي
+      if (localStream) {
+        localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+      }
+
       pc.onicecandidate = (event) => {
         if (event.candidate) socket.emit('ice_candidate', { targetId: data.broadcasterId, candidate: event.candidate });
       };
@@ -160,23 +174,43 @@
           document.getElementById('audio-players-container').appendChild(audioEl);
         }
         audioEl.srcObject = event.streams[0];
+        audioEl.play().catch(e => console.log('Autoplay blocked'));
       };
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
       socket.emit('audio_offer', { targetId: data.broadcasterId, sdp: pc.localDescription });
     });
+
     socket.on('audio_offer', async (data) => {
       const pc = peerConnections[data.senderId] || new RTCPeerConnection(rtcConfig);
       peerConnections[data.senderId] = pc;
-      if (localStream) localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
+      // مهم جداً: لازم اضيف صوتي قبل ما ارد
+      if (localStream) {
+        localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+      }
+
       pc.onicecandidate = (event) => {
         if (event.candidate) socket.emit('ice_candidate', { targetId: data.senderId, candidate: event.candidate });
+      };
+      pc.ontrack = (event) => {
+        let audioEl = document.getElementById(`audio-${data.senderId}`);
+        if (!audioEl) {
+          audioEl = document.createElement('audio');
+          audioEl.id = `audio-${data.senderId}`;
+          audioEl.autoplay = true;
+          audioEl.playsInline = true;
+          document.getElementById('audio-players-container').appendChild(audioEl);
+        }
+        audioEl.srcObject = event.streams[0];
+        audioEl.play().catch(e => console.log('Autoplay blocked'));
       };
       await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
       socket.emit('audio_answer', { targetId: data.senderId, sdp: pc.localDescription });
     });
+
     socket.on('audio_answer', async (data) => {
       const pc = peerConnections[data.senderId];
       if (pc) await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
