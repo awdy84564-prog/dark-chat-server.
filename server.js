@@ -8,22 +8,19 @@ const io = new Server(server, { cors: { origin: "*" } });
 app.use(express.static(__dirname));
 const PORT = process.env.PORT || 3000;
 
-// الرتب + الالوان + الصلاحيات
 const ROLES = {
   'ضيف': { name: 'ضيف', level: 0, color: '#aaaaaa' },
   'ادمن': { name: 'ادمن', level: 1, color: '#00aaff' },
   'اونر': { name: 'اونر', level: 2, color: '#ffaa00' },
-  'المؤسس': { name: 'المؤسس', level: 3, color: '#FFD700' } // ذهبي
+  'المؤسس': { name: 'المؤسس', level: 3, color: '#FFD700' }
 };
 
-// كلمات السر
 const PASSWORDS = {
   'dark2025': 'المؤسس',
   'owner123': 'اونر',
   'admin123': 'ادمن'
 };
 
-// الغرف - كل غرفة لها يوزرات ومايكات لحال
 let rooms = {
   'الغرفة العامة': {
     users: {},
@@ -34,7 +31,7 @@ let rooms = {
   }
 };
 
-let bannedIPs = new Set(); // تخزين الـ IP المحظورة
+let bannedIPs = new Set();
 
 function leaveAnyMic(socket, roomName) {
   const room = rooms[roomName];
@@ -54,7 +51,6 @@ function leaveAnyMic(socket, roomName) {
 io.on('connection', (socket) => {
   const userIP = socket.handshake.address;
 
-  // منع المحظورين
   if (bannedIPs.has(userIP)) {
     socket.emit('login_error', '🚫 انت محظور من السيرفر');
     socket.disconnect();
@@ -64,7 +60,6 @@ io.on('connection', (socket) => {
   socket.on('join_room', (data) => {
     const { username, password, roomName = 'الغرفة العامة' } = data;
 
-    // انشاء الغرفة اذا مش موجودة
     if (!rooms[roomName]) {
       rooms[roomName] = {
         users: {},
@@ -77,6 +72,13 @@ io.on('connection', (socket) => {
 
     const room = rooms[roomName];
     let role = PASSWORDS[password] || 'ضيف';
+
+    // لو كان بنفس الغرفة من قبل نطلعه اول
+    if (socket.currentRoom && rooms[socket.currentRoom]?.users[socket.id]) {
+      leaveAnyMic(socket, socket.currentRoom);
+      socket.leave(socket.currentRoom);
+      delete rooms[socket.currentRoom].users[socket.id];
+    }
 
     room.users[socket.id] = {
       username, role, socketId: socket.id,
@@ -95,12 +97,12 @@ io.on('connection', (socket) => {
     });
 
     socket.to(roomName).emit('user_joined', room.users[socket.id]);
-    io.emit('update_rooms_list', Object.keys(rooms)); // تحديث قائمة الغرف للكل
+    io.emit('update_rooms_list', Object.keys(rooms));
   });
 
   socket.on('create_room', (newRoomName) => {
     const user = rooms[socket.currentRoom]?.users[socket.id];
-    if (!user || ROLES[user.role].level < 2) { // اونر وفوق فقط
+    if (!user || ROLES[user.role].level < 2) {
       socket.emit('sys_broadcast', { text: "❌ فقط الاونر والمؤسس يقدر ينشئ غرف" });
       return;
     }
@@ -176,7 +178,6 @@ io.on('connection', (socket) => {
     });
   });
 
-  // اوامر الادمن
   socket.on('admin_action', (data) => {
     const room = rooms[socket.currentRoom];
     const admin = room?.users[socket.id];
@@ -207,13 +208,14 @@ io.on('connection', (socket) => {
         break;
 
       case 'set_role':
-        if (ROLES[admin.role].level < 3) { // فقط المؤسس
+        if (ROLES[admin.role].level < 3) {
           socket.emit('sys_broadcast', { text: "❌ فقط المؤسس يقدر يعطي رتب" });
           return;
         }
         target.role = data.newRole;
         target.color = ROLES[data.newRole].color;
         io.to(socket.currentRoom).emit('user_updated', target);
+        io.to(target.socketId).emit('role_changed', { newRole: data.newRole }); // تحديث الهيدر عنده
         io.to(socket.currentRoom).emit('sys_broadcast', { text: `⭐ تم ترقية ${target.username} الى ${ROLES[data.newRole].name} بواسطة ${admin.username}` });
         break;
     }
@@ -228,7 +230,6 @@ io.on('connection', (socket) => {
     io.to(socket.currentRoom).emit('sys_broadcast', { text: `${room.mics[slotId].isLocked? '🔒' : '🔓'} المايك ${slotId + 1} ${room.mics[slotId].isLocked? 'تقفل' : 'تفتح'} بواسطة ${user.username}` });
   });
 
-  // WebRTC Signaling
   socket.on('webrtc_offer', (data) => {
     io.to(data.to).emit('webrtc_offer', { offer: data.offer, from: socket.id });
   });
