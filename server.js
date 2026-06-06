@@ -7,7 +7,7 @@ const io = new Server(server, {
   cors: { origin: "*" }
 });
 
-// مهم جداً للـ manifest والـ APK
+// هذا السطر ضفته لك - يحل مشكلة Deploy failed والـ APK
 app.use(express.static(__dirname));
 
 const PORT = process.env.PORT || 3000;
@@ -73,13 +73,13 @@ io.on('connection', (socket) => {
     io.emit('update_mics', micSlots);
     io.emit('sys_broadcast', { text: `🎤 صعد [${ROLES[user.role].name}] ${user.username} على المايك رقم ${slotId + 1}` });
 
-    // 1. اخبر الكل ان في شخص جديد طلع مايك
+    // اخبر الكل ان في شخص جديد طلع مايك
     socket.broadcast.emit('mic_stream_started', {
       broadcasterId: socket.id,
       slotId: slotId
     });
 
-    // 2. اخبر الشخص الجديد عن كل الناس اللي على المايك حالياً
+    // اخبر الشخص الجديد عن كل الناس اللي على المايك حالياً
     micSlots.forEach((slot, index) => {
       if (slot.userId && slot.userId!== socket.id) {
         socket.emit('mic_stream_started', {
