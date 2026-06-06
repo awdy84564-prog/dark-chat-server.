@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LUGANA DARK CHAT - نسخة لقانا الآمنة</title>
+<title>LUGANA DARK CHAT - بث صوتي مباشر</title>
 <script src="https://socket.io"></script>
 <style>
 :root { --bg-main: #0b0b0b; --bg-card: #161616; --bg-input: #222222; --text-color: #e0e0e0; --accent: #ff3366; }
@@ -17,7 +17,8 @@ header { background: var(--bg-card); padding: 15px; text-align: center; font-wei
 .mic-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; justify-items: center; }
 .mic-slot { display: flex; flex-direction: column; align-items: center; width: 100%; cursor: pointer; background: rgba(255,255,255,0.02); padding: 6px 0; border-radius: 8px; border: 1px solid #222; }
 .mic-avatar { width: 45px; height: 45px; background: var(--bg-input); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #444; font-size: 20px; }
-.mic-avatar.active { border-color: #00ffcc; box-shadow: 0 0 8px #00ffcc; }
+.mic-avatar.active { border-color: #00ffcc; box-shadow: 0 0 8px #00ffcc; animation: pulse-mic 1.5s infinite alternate; }
+@keyframes pulse-mic { 0% { box-shadow: 0 0 4px #00ffcc; } 100% { box-shadow: 0 0 12px #00ffcc; } }
 .mic-avatar.locked { border-color: #ff3366; background: #301015; }
 .mic-name { font-size: 11px; margin-top: 4px; color: #aaa; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; width: 90%; text-align: center; }
 
@@ -41,6 +42,9 @@ button { background: var(--accent); color: white; border: none; padding: 12px 24
 </style>
 </head>
 <body>
+
+<!-- مشغلات الصوت الديناميكية للبث -->
+<div id="audio-players-container" style="display:none;"></div>
 
 <div id="admin-context-menu" class="admin-menu">
     <button onclick="executeAdminAction('kick')">👢 طرد المستخدم</button>
@@ -92,6 +96,11 @@ let socket;
 let myData = {};
 let selectedUserIdForAdmin = null;
 let selectedSlotIdForAdmin = null;
+
+// متغيرات بث الصوت WebRTC
+let localStream = null;
+let peerConnections = {}; 
+const rtcConfig = { iceServers: [{ urls: 'ice:://google.com' }] };
 
 const rowTop = document.getElementById('mic-row-top');
 const rowBottom = document.getElementById('mic-row-bottom');
@@ -145,45 +154,34 @@ function enterApplication() {
         });
         document.getElementById('leave-mic-btn').style.display = amIOnMic ? 'block' : 'none';
     });
-}
 
-function appendMessage(data, isSys = false) {
-    const list = document.getElementById('messages-list');
-    const li = document.createElement('li');
-    if(isSys) {
-        li.className = 'msg msg-sys'; li.innerText = data;
-    } else {
-        li.className = 'msg';
-        li.innerHTML = `<strong class="username-clickable" style="color: ${data.color}" onclick="openAdminMenu(event, '${data.id}', ${data.role})">[${data.roleName}] ${data.username}:</strong> <span>${data.text}</span>`;
-    }
-    list.appendChild(li);
-    list.scrollTop = list.scrollHeight;
-}
+    // ================= استقبال وتنفيذ أوامر البث الصوتي المباشر =================
+    socket.on('mic_stream_started', async (data) => {
+        // إذا بدأ شخص ما بالحديث، نقوم بإنشاء اتصال لاستقبال صوته
+        const pc = new RTCPeerConnection(rtcConfig);
+        peerConnections[data.broadcasterId] = pc;
 
-function sendMessage() {
-    const input = document.getElementById('msg-input');
-    const text = input.value.trim();
-    if(!text || !socket) return;
-    socket.emit('send_chat_msg', text);
-    input.value = '';
-}
+        pc.onicecandidate = (event) => {
+            if (event.candidate) {
+                socket.emit('ice_candidate', { targetId: data.broadcasterId, candidate: event.candidate });
+            }
+        };
 
-function checkEnter(event) { if(event.key === 'Enter') sendMessage(); }
-function handleMicClick(slotId) { if(!socket) return; selectedSlotIdForAdmin = slotId; socket.emit('request_mic', slotId); }
-function leaveMic() { if(socket) socket.emit('leave_mic'); }
+        pc.ontrack = (event) => {
+            // تشغيل مسار الصوت حياً لدى المستمع
+            let audioEl = document.getElementById(`audio-${data.broadcasterId}`);
+            if (!audioEl) {
+                audioEl = document.createElement('audio');
+                audioEl.id = `audio-${data.broadcasterId}`;
+                audioEl.autoplay = true;
+                document.getElementById('audio-players-container').appendChild(audioEl);
+            }
+            audioEl.srcObject = event.streams[0];
+        };
 
-function openAdminMenu(event, targetId) {
-    event.preventDefault();
-    if(targetId === socket.id) return; // منع التحكم بنفسك
-    selectedUserIdForAdmin = targetId;
-    const menu = document.getElementById('admin-context-menu');
-    menu.style.display = 'flex';
-    menu.style.top = `${event.clientY}px`;
-    menu.style.left = `${event.clientX}px`;
-}
+        // إرسال عرض لبدء الاتصال
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        socket.emit('audio_offer', { targetId: data.broadcasterId, sdp: pc.localDescription });
+    });
 
-function closeAdminMenu() { document.getElementById('admin-context-menu').style.display = 'none'; }
-
-function executeAdminAction(action) {
-    if (!socket) return;
-    if (action === 'lock_mic' && selectedSlotIdForAdmin !== null) {
