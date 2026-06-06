@@ -1,350 +1,271 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LUGANA DARK CHAT - بث صوتي مباشر</title>
-<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-<style>
-:root { --bg-main: #0b0b0b; --bg-card: #161616; --bg-input: #222222; --text-color: #e0e0e0; --accent: #ff3366; }
-body { background-color: var(--bg-main); color: var(--text-color); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; }
-#login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; padding: 20px; }
-.login-box { background: var(--bg-card); padding: 30px; border-radius: 12px; width: 100%; max-width: 360px; box-shadow: 0 8px 24px rgba(0,0,0,0.8); border: 1px solid #222; }
-#app-screen { display: none; flex-direction: column; height: 100vh; }
-header { background: var(--bg-card); padding: 15px; text-align: center; font-weight: bold; font-size: 18px; border-bottom: 1px solid #222; color: var(--accent); }
-
-.mics-container { background: #111; padding: 10px; border-bottom: 1px solid #222; display: flex; flex-direction: column; gap: 10px; }
-.mic-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; justify-items: center; }
-.mic-slot { display: flex; flex-direction: column; align-items: center; width: 100%; cursor: pointer; background: rgba(255,255,255,0.02); padding: 6px 0; border-radius: 8px; border: 1px solid #222; }
-.mic-avatar { width: 45px; height: 45px; background: var(--bg-input); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #444; font-size: 20px; }
-.mic-avatar.active { border-color: #00ffcc; box-shadow: 0 0 8px #00ffcc; animation: pulse-mic 1.5s infinite alternate; }
-@keyframes pulse-mic { 0% { box-shadow: 0 0 4px #00ffcc; } 100% { box-shadow: 0 0 12px #00ffcc; } }
-.mic-avatar.locked { border-color: #ff3366; background: #301015; }
-.mic-name { font-size: 11px; margin-top: 4px; color: #aaa; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; width: 90%; text-align: center; }
-
-.chat-container { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
-#messages-list { flex-grow: 1; padding: 15px; overflow-y: auto; list-style: none; margin: 0; background: #0d0d0d; }
-.msg { margin-bottom: 10px; line-height: 1.5; font-size: 15px; word-break: break-word; }
-.username-clickable { cursor: pointer; text-decoration: underline; margin-left: 4px; }
-.msg-sys { color: #aaa; font-size: 13px; text-align: center; background: rgba(255,255,255,0.04); padding: 6px; border-radius: 4px; margin: 8px auto; max-width: 80%; border: 1px solid #333; }
-
-.admin-menu { position: fixed; background: #1e1e1e; border: 1px solid #444; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); display: none; flex-direction: column; z-index: 1000; overflow: hidden; }
-.admin-menu button { background: transparent; color: white; padding: 10px 20px; border: none; border-bottom: 1px solid #333; text-align: right; width: 100%; font-size: 13px; cursor: pointer; }
-.admin-menu button:hover { background: #333; }
-.admin-menu button.close-btn { background: #ff3366; color: white; border: none;}
-
-.input-area { background: var(--bg-card); padding: 10px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #222; }
-.controls-row { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
-.input-row { display: flex; gap: 8px; }
-input[type="text"], input[type="password"], select { background: var(--bg-input); border: 1px solid #333; color: #fff; padding: 12px; border-radius: 6px; font-size: 15px; width: -webkit-fill-available; box-sizing: border-box; }
-button { background: var(--accent); color: white; border: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 15px; }
-.leave-mic-btn { background: #555; font-size: 12px; padding: 6px 12px; border-radius: 4px; display: none; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LUGANA DARK CHAT - بث صوتي مباشر</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <style>
+    :root { --bg-main: #0b0b0b; --bg-card: #161616; --bg-input: #222222; --text-color: #e0e0e0; --accent: #ff3366; }
+    body { background-color: var(--bg-main); color: var(--text-color); font-family: 'Segoe UI', Tahoma; margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; }
+    #login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; padding: 20px; }
+  .login-box { background: var(--bg-card); padding: 30px; border-radius: 12px; width: 100%; max-width: 360px; box-shadow: 0 8px 24px rgba(0,0,0,0.8); border: 1px solid #222; }
+    #app-screen { display: none; flex-direction: column; height: 100vh; }
+    header { background: var(--bg-card); padding: 15px; text-align: center; font-weight: bold; font-size: 18px; border-bottom: 1px solid #222; color: var(--accent); }
+  .mics-container { background: #111; padding: 10px; border-bottom: 1px solid #222; display: flex; flex-direction: column; gap: 10px; }
+  .mic-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; justify-items: center; }
+  .mic-slot { display: flex; flex-direction: column; align-items: center; width: 100%; cursor: pointer; background: rgba(255,255,255,0.02); padding: 6px 0; border-radius: 8px; border: 1px solid #222; }
+  .mic-avatar { width: 45px; height: 45px; background: var(--bg-input); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #444; font-size: 20px; }
+  .mic-avatar.active { border-color: #00ffcc; box-shadow: 0 0 8px #00ffcc; animation: pulse-mic 1.5s infinite alternate; }
+    @keyframes pulse-mic { 0% { box-shadow: 0 0 4px #00ffcc; } 100% { box-shadow: 0 0 12px #00ffcc; } }
+  .mic-avatar.locked { border-color: #ff3366; background: #301015; }
+  .mic-name { font-size: 11px; margin-top: 4px; color: #aaa; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; width: 90%; text-align: center; }
+  .chat-container { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
+    #messages-list { flex-grow: 1; padding: 15px; overflow-y: auto; list-style: none; margin: 0; background: #0d0d0d; }
+  .msg { margin-bottom: 10px; line-height: 1.5; font-size: 15px; word-break: break-word; }
+  .username-clickable { cursor: pointer; text-decoration: underline; margin-left: 4px; }
+  .msg-sys { color: #aaa; font-size: 13px; text-align: center; background: rgba(255,255,255,0.04); padding: 6px; border-radius: 4px; margin: 8px auto; max-width: 80%; border: 1px solid #333; }
+  .admin-menu { position: fixed; background: #1e1e1e; border: 1px solid #444; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); display: none; flex-direction: column; z-index: 1000; overflow: hidden; }
+  .admin-menu button { background: transparent; color: white; padding: 10px 20px; border: none; border-bottom: 1px solid #333; text-align: right; width: 100%; font-size: 13px; cursor: pointer; }
+  .admin-menu button:hover { background: #333; }
+  .admin-menu button.close-btn { background: #ff3366; color: white; border: none;}
+  .input-area { background: var(--bg-card); padding: 10px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #222; }
+  .controls-row { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+  .input-row { display: flex; gap: 8px; }
+    input[type="text"], input[type="password"] { background: var(--bg-input); border: 1px solid #333; color: #fff; padding: 12px; border-radius: 6px; font-size: 15px; width: 100%; box-sizing: border-box; }
+    button { background: var(--accent); color: white; border: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 15px; }
+  .leave-mic-btn { background: #555; font-size: 12px; padding: 6px 12px; border-radius: 4px; display: none; }
+  </style>
 </head>
 <body>
-
-<!-- مشغلات الصوت الديناميكية للبث -->
-<div id="audio-players-container" style="display:none;"></div>
-
-<div id="admin-context-menu" class="admin-menu">
+  <div id="audio-players-container" style="display:none;"></div>
+  <div id="admin-context-menu" class="admin-menu">
     <button onclick="executeAdminAction('kick')">👢 طرد المستخدم</button>
     <button onclick="executeAdminAction('mute')">🔇 كتم / إلغاء كتم</button>
     <button onclick="executeAdminAction('ban')">🚫 حظر نهائي IP</button>
     <button onclick="executeAdminAction('lock_mic')">🔒 قفل / فتح المايك</button>
     <button class="close-btn" onclick="closeAdminMenu()">إغلاق</button>
-</div>
+  </div>
 
-<div id="login-screen">
-<h1 style="color: var(--accent); margin-bottom: 20px;">LUGANA DARK CHAT</h1>
-<div class="login-box">
-<h3 style="margin-top:0; text-align:center;">تسجيل دخول سريع</h3>
-<input type="text" id="username" placeholder="ادخل الاسم المستعار..." required><br><br>
-<input type="password" id="password" placeholder="كلمة المرور (خاصة بصاحب الموقع فقط)..."><br><br>
-<label style="font-size:14px; color:#aaa;">اختر رتبتك المتوفرة:</label><br>
-<select id="role" style="margin-top:8px; width:100%;">
-<option value="GUEST">زائر (خط أبيض)</option>
-<option value="MEMBER">عضو (خط تركواز)</option>
-<option value="MODERATOR">مشرف الغرفة (خط أصفر)</option>
-<option value="ADMIN">إدمن التطبيق (خط أحمر)</option>
-</select><br><br>
-<button onclick="enterApplication()" style="width: 100%;">دخول غرف الدردشة</button>
-</div>
-</div>
+  <div id="login-screen">
+    <h1 style="color: var(--accent); margin-bottom: 20px;">LUGANA DARK CHAT</h1>
+    <div class="login-box">
+      <h3 style="margin-top:0; text-align:center;">تسجيل دخول سريع</h3>
+      <input type="text" id="username" placeholder="ادخل الاسم المستعار..." value="DARK VIP ROOT"><br><br>
+      <input type="password" id="password" placeholder="كلمة السر للمالك فقط"><br><br>
+      <button onclick="enterApplication()" style="width: 100%;">دخول غرف الدردشة</button>
+    </div>
+  </div>
 
-<div id="app-screen">
-<header id="room-header">غرفة LUGANA العامة</header>
-<div class="mics-container">
-    <div class="mic-row" id="mic-row-top"></div>
-    <div class="mic-row" id="mic-row-bottom"></div>
-</div>
-<div class="chat-container">
-<ul id="messages-list"></ul>
-<div class="input-area">
-<div class="controls-row">
-    <button class="leave-mic-btn" id="leave-mic-btn" onclick="leaveMic()">📉 انزل من المايك</button>
-</div>
-<div class="input-row">
-<input type="text" id="msg-input" placeholder="اكتب رسالتك هنا..." onkeypress="checkEnter(event)">
-<button onclick="sendMessage()">إرسال</button>
-</div>
-</div>
-</div>
-</div>
+  <div id="app-screen">
+    <header id="room-header">غرفة LUGANA العامة</header>
+    <div class="mics-container">
+      <div class="mic-row" id="mic-row-top"></div>
+      <div class="mic-row" id="mic-row-bottom"></div>
+    </div>
+    <div class="chat-container">
+      <ul id="messages-list"></ul>
+      <div class="input-area">
+        <div class="controls-row">
+          <button class="leave-mic-btn" id="leave-mic-btn" onclick="leaveMic()">📉 انزل من المايك</button>
+        </div>
+        <div class="input-row">
+          <input type="text" id="msg-input" placeholder="اكتب رسالتك هنا..." onkeypress="checkEnter(event)">
+          <button onclick="sendMessage()">إرسال</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
 <script>
-let socket;
-let myData = {};
-let selectedUserIdForAdmin = null;
-let selectedSlotIdForAdmin = null;
+  let socket;
+  let myData = {};
+  let selectedUserIdForAdmin = null;
+  let selectedSlotIdForAdmin = null;
+  let localStream = null;
+  let peerConnections = {};
+  const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
-// متغيرات بث الصوت WebRTC
-let localStream = null;
-let peerConnections = {}; 
-const rtcConfig = { iceServers: [{ urls: 'ice:://google.com' }] };
-
-const rowTop = document.getElementById('mic-row-top');
-const rowBottom = document.getElementById('mic-row-bottom');
-
-for(let i = 0; i < 8; i++) {
-    const targetRow = i < 4 ? rowTop : rowBottom;
+  const rowTop = document.getElementById('mic-row-top');
+  const rowBottom = document.getElementById('mic-row-bottom');
+  for(let i = 0; i < 8; i++) {
+    const targetRow = i < 4? rowTop : rowBottom;
     targetRow.innerHTML += `
-        <div class="mic-slot" id="mic-slot-${i}" onclick="handleMicClick(${i})">
-            <div class="mic-avatar" id="mic-icon-${i}">🎙️</div>
-            <div class="mic-name" id="mic-name-${i}">فارغ ${i+1}</div>
-        </div>
+      <div class="mic-slot" id="mic-slot-${i}" onclick="handleMicClick(${i})">
+        <div class="mic-avatar" id="mic-icon-${i}">🎙️</div>
+        <div class="mic-name" id="mic-name-${i}">فارغ ${i+1}</div>
+      </div>
     `;
-}
+  }
 
-function enterApplication() {
+  function enterApplication() {
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value.trim();
-    const role = document.getElementById('role').value;
-    if(!username) { alert("الرجاء كتابة الاسم المستعار!"); return; }
+    if(!username) return alert("الرجاء كتابة الاسم المستعار!");
 
     socket = io("https://dark-chat-server.onrender.com");
 
     socket.on('connect', () => {
-        socket.emit('register_user', { username: username, role: role, password: password });
+      socket.emit('register_user', { username: username, password: password });
     });
 
     socket.on('registration_success', (data) => {
-        myData = data;
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('app-screen').style.display = 'flex';
-        document.getElementById('room-header').innerText = `LUGANA DARK CHAT - (${data.username})`;
+      myData = data;
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('app-screen').style.display = 'flex';
+      document.getElementById('room-header').innerText = `LUGANA DARK CHAT - (${data.username})`;
     });
 
-    socket.on('login_error', (msg) => { alert(msg); });
-    socket.on('sys_broadcast', (data) => { appendMessage(data.text, true); });
-    socket.on('receive_chat_msg', (data) => { appendMessage(data); });
+    socket.on('login_error', (msg) => alert(msg));
+    socket.on('error_msg', (msg) => alert(msg));
+    socket.on('sys_broadcast', (data) => appendMessage(data.text, true));
+    socket.on('receive_chat_msg', (data) => appendMessage(data));
 
     socket.on('update_mics', (micSlots) => {
-        let amIOnMic = false;
-        micSlots.forEach((slot, index) => {
-            const iconEl = document.getElementById(`mic-icon-${index}`);
-            const nameEl = document.getElementById(`mic-name-${index}`);
-            if (slot.isLocked) {
-                iconEl.innerText = "🔒"; iconEl.className = "mic-avatar locked"; nameEl.innerText = `مغلق ${index + 1}`;
-            } else if (slot.userId) {
-                iconEl.innerText = "🗣️"; iconEl.className = "mic-avatar active"; nameEl.innerText = slot.username;
-                if (slot.userId === socket.id) amIOnMic = true;
-            } else {
-                iconEl.innerText = "🎙️"; iconEl.className = "mic-avatar"; nameEl.innerText = `فارغ ${index + 1}`;
-            }
-        });
-        document.getElementById('leave-mic-btn').style.display = amIOnMic ? 'block' : 'none';
+      let amIOnMic = false;
+      micSlots.forEach((slot, index) => {
+        const iconEl = document.getElementById(`mic-icon-${index}`);
+        const nameEl = document.getElementById(`mic-name-${index}`);
+        if (slot.isLocked) {
+          iconEl.innerText = "🔒"; iconEl.className = "mic-avatar locked"; nameEl.innerText = `مغلق`;
+        } else if (slot.userId) {
+          iconEl.innerText = "🗣️"; iconEl.className = "mic-avatar active"; nameEl.innerText = slot.username;
+          if (slot.userId === socket.id) amIOnMic = true;
+        } else {
+          iconEl.innerText = "🎙️"; iconEl.className = "mic-avatar"; nameEl.innerText = `فارغ ${index + 1}`;
+        }
+      });
+      document.getElementById('leave-mic-btn').style.display = amIOnMic? 'block' : 'none';
     });
 
-    // ================= استقبال وتنفيذ أوامر البث الصوتي المباشر =================
     socket.on('mic_stream_started', async (data) => {
-        // إذا بدأ شخص ما بالحديث، نقوم بإنشاء اتصال لاستقبال صوته
-        const pc = new RTCPeerConnection(rtcConfig);
-        peerConnections[data.broadcasterId] = pc;
-
-        pc.onicecandidate = (event) => {
-            if (event.candidate) {
-                socket.emit('ice_candidate', { targetId: data.broadcasterId, candidate: event.candidate });
-            }
-        };
-
-        pc.ontrack = (event) => {
-            // تشغيل مسار الصوت حياً لدى المستمع
-            let audioEl = document.getElementById(`audio-${data.broadcasterId}`);
-            if (!audioEl) {
-                audioEl = document.createElement('audio');
-                audioEl.id = `audio-${data.broadcasterId}`;
-                audioEl.autoplay = true;
-                document.getElementById('audio-players-container').appendChild(audioEl);
-            }
-            audioEl.srcObject = event.streams[0];
-        };
-
-        // إرسال عرض لبدء الاتصال
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        socket.emit('audio_offer', { targetId: data.broadcasterId, sdp: pc.localDescription });
-    });
-
-            } else if (slot.userId) {
-                iconEl.innerText = "🗣️"; iconEl.className = "mic-avatar active"; nameEl.innerText = slot.username;
-                if (slot.userId === socket.id) amIOnMic = true;
-            } else {
-                iconEl.innerText = "🎙️"; iconEl.className = "mic-avatar"; nameEl.innerText = `فارغ ${index + 1}`;
-            }
-        });
-        document.getElementById('leave-mic-btn').style.display = amIOnMic ? 'block' : 'none';
-    });
-
-    // ================= استقبال وتنفيذ أوامر البث الصوتي المباشر (المفقودة) =================
-    socket.on('mic_stream_started', async (data) => {
-        const pc = new RTCPeerConnection(rtcConfig);
-        peerConnections[data.broadcasterId] = pc;
-
-        pc.onicecandidate = (event) => {
-            if (event.candidate) {
-                socket.emit('ice_candidate', { targetId: data.broadcasterId, candidate: event.candidate });
-            }
-        };
-
-        pc.ontrack = (event) => {
-            let audioEl = document.getElementById(`audio-${data.broadcasterId}`);
-            if (!audioEl) {
-                audioEl = document.createElement('audio');
-                audioEl.id = `audio-${data.broadcasterId}`;
-                audioEl.autoplay = true;
-                document.getElementById('audio-players-container').appendChild(audioEl);
-            }
-            audioEl.srcObject = event.streams[0];
-        };
-
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        socket.emit('audio_offer', { targetId: data.broadcasterId, sdp: pc.localDescription });
+      const pc = new RTCPeerConnection(rtcConfig);
+      peerConnections[data.broadcasterId] = pc;
+      pc.onicecandidate = (event) => {
+        if (event.candidate) socket.emit('ice_candidate', { targetId: data.broadcasterId, candidate: event.candidate });
+      };
+      pc.ontrack = (event) => {
+        let audioEl = document.getElementById(`audio-${data.broadcasterId}`);
+        if (!audioEl) {
+          audioEl = document.createElement('audio');
+          audioEl.id = `audio-${data.broadcasterId}`;
+          audioEl.autoplay = true;
+          document.getElementById('audio-players-container').appendChild(audioEl);
+        }
+        audioEl.srcObject = event.streams[0];
+      };
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      socket.emit('audio_offer', { targetId: data.broadcasterId, sdp: pc.localDescription });
     });
 
     socket.on('audio_offer', async (data) => {
-        const pc = peerConnections[data.senderId] || new RTCPeerConnection(rtcConfig);
-        peerConnections[data.senderId] = pc;
-
-        if (localStream) {
-            localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-        }
-
-        pc.onicecandidate = (event) => {
-            if (event.candidate) {
-                socket.emit('ice_candidate', { targetId: data.senderId, candidate: event.candidate });
-            }
-        };
-
-        await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        socket.emit('audio_answer', { targetId: data.senderId, sdp: pc.localDescription });
+      const pc = peerConnections[data.senderId] || new RTCPeerConnection(rtcConfig);
+      peerConnections[data.senderId] = pc;
+      if (localStream) localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+      pc.onicecandidate = (event) => {
+        if (event.candidate) socket.emit('ice_candidate', { targetId: data.senderId, candidate: event.candidate });
+      };
+      await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      socket.emit('audio_answer', { targetId: data.senderId, sdp: pc.localDescription });
     });
 
     socket.on('audio_answer', async (data) => {
-        const pc = peerConnections[data.senderId];
-        if (pc) {
-            await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
-        }
+      const pc = peerConnections[data.senderId];
+      if (pc) await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
     });
 
     socket.on('ice_candidate', async (data) => {
-        const pc = peerConnections[data.senderId];
-        if (pc) {
-            await pc.addIceCandidate(new RTCIceCandidate(data.candidate)).catch(e => console.error(e));
-        }
+      const pc = peerConnections[data.senderId];
+      if (pc) await pc.addIceCandidate(new RTCIceCandidate(data.candidate)).catch(e => console.error(e));
     });
 
-    socket.on('mic_stream_stopped', (data) => {
-        closePeerConnection(data.broadcasterId);
-    });
+    socket.on('mic_stream_stopped', (data) => closePeerConnection(data.broadcasterId));
+    socket.on('force_leave_mic', () => leaveMic());
+  }
 
-    socket.on('force_leave_mic', () => {
-        leaveMic();
-    });
-}
-
-function appendMessage(data, isSys = false) {
+  function appendMessage(data, isSys = false) {
     const list = document.getElementById('messages-list');
     const li = document.createElement('li');
     if(isSys) {
-        li.className = 'msg msg-sys'; li.innerText = data;
+      li.className = 'msg msg-sys';
+      li.innerText = data;
     } else {
-        li.className = 'msg';
-        li.innerHTML = `<strong class="username-clickable" style="color: ${data.color}" onclick="openAdminMenu(event, '${data.id}')">[${data.roleName}] ${data.username}:</strong> <span>${data.text}</span>`;
+      li.className = 'msg';
+      li.innerHTML = `<strong class="username-clickable" style="color: ${data.color}" onclick="openAdminMenu(event, '${data.id}')">[${data.roleName}] ${data.username}:</strong> <span>${data.text}</span>`;
     }
     list.appendChild(li);
     list.scrollTop = list.scrollHeight;
-}
+  }
 
-function sendMessage() {
+  function sendMessage() {
     const input = document.getElementById('msg-input');
     const text = input.value.trim();
-    if(!text || !socket) return;
+    if(!text ||!socket) return;
     socket.emit('send_chat_msg', text);
     input.value = '';
-}
+  }
 
-function checkEnter(event) { if(event.key === 'Enter') sendMessage(); }
+  function checkEnter(event) { if(event.key === 'Enter') sendMessage(); }
 
-async function handleMicClick(slotId) {
+  async function handleMicClick(slotId) {
     if(!socket) return;
     selectedSlotIdForAdmin = slotId;
-
     try {
-        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        socket.emit('request_mic', slotId);
+      localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      socket.emit('request_mic', slotId);
     } catch (err) {
-        alert("❌ يرجى السماح بالوصول للمايكروفون للبث الصوتي!");
-        console.error(err);
+      alert("❌ يرجى السماح بالوصول للمايكروفون للبث الصوتي!");
+      console.error(err);
     }
-}
+  }
 
-function leaveMic() {
+  function leaveMic() {
     if (socket) socket.emit('leave_mic');
     if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
-        localStream = null;
+      localStream.getTracks().forEach(track => track.stop());
+      localStream = null;
     }
     Object.keys(peerConnections).forEach(key => closePeerConnection(key));
-}
+  }
 
-function closePeerConnection(id) {
+  function closePeerConnection(id) {
     if (peerConnections[id]) {
-        peerConnections[id].close();
-        delete peerConnections[id];
+      peerConnections[id].close();
+      delete peerConnections[id];
     }
     const audioEl = document.getElementById(`audio-${id}`);
     if (audioEl) audioEl.remove();
-}
+  }
 
-function openAdminMenu(event, targetId) {
+  function openAdminMenu(event, targetId) {
     event.preventDefault();
-    if(targetId === socket.id) return; 
+    if(targetId === socket.id) return;
     selectedUserIdForAdmin = targetId;
     const menu = document.getElementById('admin-context-menu');
     menu.style.display = 'flex';
     menu.style.top = `${event.clientY}px`;
     menu.style.left = `${event.clientX}px`;
-}
+  }
 
-function closeAdminMenu() { document.getElementById('admin-context-menu').style.display = 'none'; }
+  function closeAdminMenu() { document.getElementById('admin-context-menu').style.display = 'none'; }
 
-function executeAdminAction(action) {
+  function executeAdminAction(action) {
     if (!socket) return;
-    if (action === 'lock_mic' && selectedSlotIdForAdmin !== null) {
-        socket.emit('admin_toggle_mic_lock', selectedSlotIdForAdmin);
+    if (action === 'lock_mic' && selectedSlotIdForAdmin!== null) {
+      socket.emit('admin_toggle_mic_lock', selectedSlotIdForAdmin);
     } else if (selectedUserIdForAdmin) {
-        socket.emit('admin_action', { action: action, targetId: selectedUserIdForAdmin });
+      socket.emit('admin_action', { action: action, targetId: selectedUserIdForAdmin });
     }
     closeAdminMenu();
-}
+  }
 
-document.addEventListener('click', function(e) {
+  document.addEventListener('click', function(e) {
     const menu = document.getElementById('admin-context-menu');
-    if (!menu.contains(e.target) && e.target.className !== 'username-clickable') closeAdminMenu();
-});
+    if (!menu.contains(e.target) && e.target.className!== 'username-clickable') closeAdminMenu();
+  });
 </script>
 </body>
 </html>
