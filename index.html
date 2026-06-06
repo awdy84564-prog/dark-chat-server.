@@ -1,1 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Dark Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: Arial; background: #111; color: #eee; margin: 0; padding: 20px; }
+    #messages { list-style: none; padding: 0; margin-bottom: 50px; }
+    #messages li { padding: 8px 12px; background: #222; margin: 5px 0; border-radius: 8px; }
+    #form { position: fixed; bottom: 0; left: 0; right: 0; display: flex; padding: 10px; background: #000; }
+    #input { flex: 1; padding: 10px; border: none; border-radius: 5px; }
+    button { padding: 10px; margin-left: 5px; background: #7c3aed; color: white; border: none; border-radius: 5px; }
+  </style>
+</head>
+<body>
+  <ul id="messages"></ul>
+  <form id="form">
+    <input id="input" autocomplete="off" placeholder="اكتب رسالة..." />
+    <button>ارسال</button>
+  </form>
 
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const form = document.getElementById('form');
+    const input = document.getElementById('input');
+    const messages = document.getElementById('messages');
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (input.value) {
+        socket.emit('chat message', input.value);
+        input.value = '';
+      }
+    });
+
+    socket.on('chat message', (msg) => {
+      const item = document.createElement('li');
+      item.textContent = msg;
+      messages.appendChild(item);
+      window.scrollTo(0, document.body.scrollHeight);
+    });
+  </script>
+</body>
+</html>
