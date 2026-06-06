@@ -50,7 +50,6 @@
 <body>
   <div id="audio-players-container" style="display:none;"></div>
 
-  <!-- قائمة الادمن -->
   <div id="admin-context-menu" class="admin-menu">
     <button onclick="executeAdminAction('kick')">👢 طرد المستخدم</button>
     <button onclick="executeAdminAction('mute')">🔇 كتم / الغاء كتم</button>
@@ -60,7 +59,6 @@
     <button class="close-btn" onclick="closeAdminMenu()">إغلاق</button>
   </div>
 
-  <!-- نافذة اعطاء الرتب -->
   <div id="role-modal" class="modal">
     <div class="modal-content">
       <h3 style="margin-top:0; color:var(--accent)">اعطاء رتبة</h3>
@@ -76,7 +74,6 @@
     </div>
   </div>
 
-  <!-- نافذة انشاء غرفة -->
   <div id="room-modal" class="modal">
     <div class="modal-content">
       <h3 style="margin-top:0; color:var(--accent)">انشاء غرفة جديدة</h3>
@@ -86,22 +83,19 @@
     </div>
   </div>
 
-  <!-- نافذة تسجيل دخول للغرفة -->
   <div id="room-login-modal" class="modal">
     <div class="modal-content">
       <h3 style="margin-top:0; color:var(--accent)">دخول غرفة: <span id="room-login-name"></span></h3>
       <input type="text" id="room-username" placeholder="الاسم المستعار"><br><br>
-      <input type="password" id="room-password" placeholder="كلمة السر للرتبة - فارغ = ضيف"><br>
-      <small style="color:#666;">المؤسس: dark2025 | اونر: owner123 | ادمن: admin123</small><br><br>
+      <input type="password" id="room-password" placeholder="كلمة السر - فارغ = ضيف"><br><br>
       <button onclick="confirmRoomLogin()">دخول</button>
       <button onclick="closeRoomLoginModal()" style="background:#555;color:white;margin-right:8px">الغاء</button>
     </div>
   </div>
 
-  <!-- نافذة الاعدادات -->
   <div id="settings-modal" class="modal">
     <div class="modal-content">
-      <h3 style="margin-top:0; color:var(--accent)">⚙️ اعدادات الغرفة</h3>
+      <h3 style="margin-top:0; color:var(--accent)">⚙️ اعدادات</h3>
       <p><b>الرتبة:</b> <span id="settings-role"></span></p>
       <p><b>الغرفة:</b> <span id="settings-room"></span></p>
       <button onclick="leaveMic()">📉 انزل من المايك</button><br><br>
@@ -114,8 +108,7 @@
     <div class="login-box">
       <h3 style="margin-top:0; text-align:center;">تسجيل دخول الغرفة العامة</h3>
       <input type="text" id="username" placeholder="الاسم المستعار" value="DARK VIP ROOT"><br><br>
-      <input type="password" id="password" placeholder="كلمة السر للرتبة" value="dark2025"><br>
-      <small style="color:#666;">المؤسس: dark2025 | اونر: owner123 | ادمن: admin123</small><br><br>
+      <input type="password" id="password" placeholder="كلمة السر للرتبة" value="dark2025"><br><br>
       <button onclick="enterApplication()" style="width: 100%;">دخول</button>
     </div>
   </div>
@@ -221,7 +214,7 @@
 
         updateRoomsBar(data.allRooms);
         updateMics(data.mics);
-        document.getElementById('messages-list').innerHTML = ''; // مسح الشات عند تغيير الغرفة
+        document.getElementById('messages-list').innerHTML = '';
       });
 
       socket.off('update_rooms_list');
@@ -365,4 +358,139 @@
           nameEl.innerText = `فارغ ${index + 1}`;
         }
       });
-      document.getElementById('leave-mic
+      document.getElementById('leave-mic-btn').style.display = amIOnMic? 'block' : 'none';
+    }
+
+    function appendMessage(data, isSys = false) {
+      const list = document.getElementById('messages-list');
+      const li = document.createElement('li');
+      if(isSys) {
+        li.className = 'msg msg-sys';
+        li.innerText = data;
+      } else {
+        li.className = 'msg';
+        const roleClass = data.role === 'المؤسس'? 'role-founder' : '';
+        li.innerHTML = `<strong class="username-clickable${roleClass}" style="color: ${data.color}" onclick="openAdminMenu(event, '${data.id}')">[${data.roleName}] ${data.username}:</strong> <span>${data.text}</span>`;
+      }
+      list.appendChild(li);
+      list.scrollTop = list.scrollHeight;
+    }
+
+    function sendMessage() {
+      const input = document.getElementById('msg-input');
+      const text = input.value.trim();
+      if(!text ||!socket) return;
+      socket.emit('send_message', text);
+      input.value = '';
+    }
+
+    function checkEnter(event) {
+      if(event.key === 'Enter') sendMessage();
+    }
+
+    async function handleMicClick(slotId) {
+      if(!socket) return;
+      selectedSlotIdForAdmin = slotId;
+      try {
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        socket.emit('request_mic', slotId);
+      } catch (err) {
+        alert("❌ يرجى السماح بالمايكروفون من اعدادات المتصفح!");
+      }
+    }
+
+    function leaveMic() {
+      if (socket) socket.emit('leave_mic');
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+      }
+      Object.keys(peerConnections).forEach(key => closePeerConnection(key));
+    }
+
+    function closePeerConnection(id) {
+      if (peerConnections[id]) {
+        peerConnections[id].close();
+        delete peerConnections[id];
+      }
+      const audioEl = document.getElementById(`audio-${id}`);
+      if (audioEl) audioEl.remove();
+    }
+
+    // قائمة الادمن
+    function openAdminMenu(event, targetId) {
+      event.preventDefault();
+      if(targetId === socket.id ||!['ادمن','اونر','المؤسس'].includes(myData.role)) return;
+      selectedUserIdForAdmin = targetId;
+      const menu = document.getElementById('admin-context-menu');
+      menu.style.display = 'flex';
+      menu.style.top = `${event.clientY}px`;
+      menu.style.left = `${event.clientX}px`;
+    }
+
+    function closeAdminMenu() {
+      document.getElementById('admin-context-menu').style.display = 'none';
+    }
+
+    function executeAdminAction(action) {
+      if (!socket) return;
+      if (action === 'lock_mic' && selectedSlotIdForAdmin!== null) {
+        socket.emit('admin_toggle_mic_lock', selectedSlotIdForAdmin);
+      } else if (selectedUserIdForAdmin) {
+        socket.emit('admin_action', { action: action, targetId: selectedUserIdForAdmin });
+      }
+      closeAdminMenu();
+    }
+
+    // اعطاء رتبة
+    function openRoleModal() {
+      closeAdminMenu();
+      document.getElementById('role-modal').style.display = 'flex';
+      document.getElementById('role-target-name').innerText = 'اختر رتبة جديدة';
+    }
+
+    function closeRoleModal() {
+      document.getElementById('role-modal').style.display = 'none';
+    }
+
+    function confirmSetRole() {
+      const newRole = document.getElementById('role-select').value;
+      socket.emit('admin_action', { action: 'set_role', targetId: selectedUserIdForAdmin, newRole });
+      closeRoleModal();
+    }
+
+    // انشاء غرفة
+    function openRoomModal() {
+      document.getElementById('room-modal').style.display = 'flex';
+    }
+
+    function closeRoomModal() {
+      document.getElementById('room-modal').style.display = 'none';
+    }
+
+    function confirmCreateRoom() {
+      const name = document.getElementById('new-room-name').value.trim();
+      if (!name) return alert('اكتب اسم الغرفة');
+      socket.emit('create_room', name);
+      closeRoomModal();
+      document.getElementById('new-room-name').value = '';
+    }
+
+    // الاعدادات
+    function openSettingsModal() {
+      document.getElementById('settings-modal').style.display = 'flex';
+      document.getElementById('settings-role').innerText = `[${myData.role}]`;
+      document.getElementById('settings-room').innerText = currentRoom;
+    }
+
+    function closeSettingsModal() {
+      document.getElementById('settings-modal').style.display = 'none';
+    }
+
+    document.addEventListener('click', function(e) {
+      const menu = document.getElementById('admin-context-menu');
+      if (!menu.contains(e.target) && e.target.className.indexOf('username-clickable') === -1) closeAdminMenu();
+    });
+  </script>
+</body>
+</html>
