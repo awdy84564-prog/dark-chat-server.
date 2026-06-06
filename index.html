@@ -121,7 +121,7 @@ function enterApplication() {
     const role = document.getElementById('role').value;
     if(!username) { alert("الرجاء كتابة الاسم المستعار!"); return; }
 
-    socket = io();
+    socket = io("https://dark-chat-server.onrender.com");
 
     socket.on('connect', () => {
         socket.emit('register_user', { username: username, role: role, password: password });
