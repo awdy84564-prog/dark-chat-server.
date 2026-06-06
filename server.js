@@ -9,7 +9,6 @@ const io = new Server(server, { cors: { origin: "*" } });
 let activeUsers = {};
 let bannedIPs = new Set(); 
 
-// بيانات حماية صاحب الموقع
 const ADMIN_NAME = "DARK VIP ROOT";
 const OWNER_PASSWORD = "muhammed0940";
 
@@ -46,22 +45,18 @@ io.on('connection', (socket) => {
         return;
     }
 
-    // فحص بيانات الدخول والتحقق من كلمة المرور
     socket.on('register_user', (data) => {
         let selectedRole = data.role && ROLES[data.role] ? data.role : "GUEST";
         let finalUsername = data.username || "مستخدم مجهول";
 
-        // 🛡️ فحص الحماية لصاحب الموقع
         if (finalUsername === ADMIN_NAME) {
             if (data.password === OWNER_PASSWORD) {
-                selectedRole = "OWNER"; // منح رتبة صاحب الموقع
+                selectedRole = "OWNER";
             } else {
-                // إذا حاول شخص تقليد اسمك بكلمة مرور خاطئة يتم رفضه
                 socket.emit('login_error', "❌ اسم المستخدم هذا محجوز ومحمى بكلمة مرور!");
                 return;
             }
         } else {
-            // منع المستخدمين العاديين من الدخول برتب الإدارة العليا مباشرة
             if (["OWNER", "CROWN", "MASTER"].includes(selectedRole)) {
                 selectedRole = "GUEST"; 
             }
@@ -96,7 +91,6 @@ io.on('connection', (socket) => {
             return;
         }
 
-        // 🛡️ حماية إضافية مدمجة: حظر أي محاولة لكتابة كلمة السر داخل الشات نهائياً
         if (msgText.includes(OWNER_PASSWORD)) {
             socket.emit('sys_broadcast', { text: "⚠️ تنبيه: رسالتك تحتوي على كلمات سرية محظورة ولم يتم إرسالها." });
             return; 
@@ -119,7 +113,6 @@ io.on('connection', (socket) => {
         const target = activeUsers[data.targetId];
         if (!admin) return;
 
-        // الطرد، الكتم، والحظر تعتمد على الفحص الدقيق للمعرف (ID)
         if (data.action === 'kick' && target) {
             if (ROLES[admin.role].level > ROLES[target.role].level) {
                 io.to(target.room).emit('sys_broadcast', { text: `🚨 تم طرد ${target.username} بواسطة ${admin.username}.` });
@@ -145,7 +138,7 @@ io.on('connection', (socket) => {
         }
     });
 
-    // ================= نظام إدارة الـ 8 مايكات =================
+    // ================= نظام إدارة الـ 8 مايكات المتطور صوتياً =================
     socket.on('request_mic', (slotId) => {
         const user = activeUsers[socket.id];
         if (!user || slotId < 0 || slotId > 7) return;
@@ -166,6 +159,9 @@ io.on('connection', (socket) => {
 
         io.emit('update_mics', micSlots);
         io.emit('sys_broadcast', { text: `🎤 صعد [${ROLES[user.role].name}] ${user.username} على المايك رقم ${slotId + 1}` });
+        
+        // إخطار الجميع أن هناك شخصاً يطلب فتح بث صوتي الآن
+        socket.broadcast.to("المضافة العامة").emit('mic_stream_started', { broadcasterId: socket.id, slotId: slotId });
     });
 
     socket.on('leave_mic', () => {
@@ -181,11 +177,26 @@ io.on('connection', (socket) => {
 
         micSlots[slotId].isLocked = !micSlots[slotId].isLocked;
         if (micSlots[slotId].isLocked && micSlots[slotId].userId) {
+            const dischargedId = micSlots[slotId].userId;
             micSlots[slotId].userId = null;
             micSlots[slotId].username = null;
+            io.to(dischargedId).emit('force_leave_mic');
         }
 
         io.emit('update_mics', micSlots);
+    });
+
+    // ================= وسيط نقل بث الإشارات الصوتية (WebRTC Signaling) =================
+    socket.on('audio_offer', (data) => {
+        io.to(data.targetId).emit('audio_offer', { sdp: data.sdp, senderId: socket.id });
+    });
+
+    socket.on('audio_answer', (data) => {
+        io.to(data.targetId).emit('audio_answer', { sdp: data.sdp, senderId: socket.id });
+    });
+
+    socket.on('ice_candidate', (data) => {
+        io.to(data.targetId).emit('ice_candidate', { candidate: data.candidate, senderId: socket.id });
     });
 
     socket.on('disconnect', () => {
@@ -211,6 +222,7 @@ io.on('connection', (socket) => {
                 slot.username = null;
                 io.emit('update_mics', micSlots);
                 io.emit('sys_broadcast', { text: `📉 نزل ${uname} من المايك رقم ${slot.slotId + 1}` });
+                io.to("المضافة العامة").emit('mic_stream_stopped', { broadcasterId: userId });
             }
         });
     }
@@ -218,5 +230,5 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
-    console.log(`🔥 LUGANA DARK CHAT SERVER IS LIVE!`);
+    console.log(`🔥 LUGANA DARK CHAT LIVE ON PORT ${PORT}!`);
 });
