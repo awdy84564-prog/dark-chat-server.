@@ -193,7 +193,8 @@
       if(!name) { alert("من فضلك اكتب الاسم أولاً!"); return; }
 
       // الاتصال بسيرفر ريندر العالمي المباشر الخاص بك
-      socket = io("https://onrender.com");
+      socket = io("https://dark-chat-server.onrender.com");
+
 
       socket.on('connect', () => {
         socket.emit('register_user', { username: name, password: pass });
