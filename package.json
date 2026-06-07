@@ -1,13 +1,18 @@
 {
-  "name": "lugana-dark-chat",
-  "version": "2.0.0",
-  "description": "LUGANA DARK CHAT - بث صوتي مع صلاحيات كاملة",
+  "name": "dark-vip-root",
+  "version": "1.0.0",
+  "description": "تطبيق DARK VIP ROOT - غرف دردشة صوتية وكتابية متكاملة بنظام لقانا",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "socket.io": "^4.7.2"
-  }
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "MUHAMMED OWNER",
+  "license": "ISC"
 }
