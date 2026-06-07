@@ -8,30 +8,40 @@ const io = new Server(server, { cors: { origin: "*" } });
 app.use(express.static(__dirname));
 const PORT = process.env.PORT || 3000;
 
+// نظام رتب لقانا الكامل بالدرجات والألوان المحددة
 const ROLES = {
-  'ضيف': { name: 'ضيف', level: 0, color: '#aaaaaa' },
-  'ادمن': { name: 'ادمن', level: 1, color: '#00aaff' },
-  'اونر': { name: 'اونر', level: 2, color: '#ffaa00' },
-  'المؤسس': { name: 'المؤسس', level: 3, color: '#FFD700' }
+  'GUEST': { name: 'زائر', level: 0, color: '#ffffff' },
+  'MEMBER': { name: 'عضو', level: 1, color: '#00ffcc' },
+  'MODERATOR': { name: 'مشرف الغرفة', level: 2, color: '#ffcc00' },
+  'ADMIN': { name: 'إدمن التطبيق', level: 3, color: '#ff3366' },
+  'MASTER': { name: 'ماستر', level: 4, color: '#9933ff' },
+  'CROWN': { name: 'تاج', level: 5, color: '#ffd700' },
+  'OWNER': { name: 'صاحب الموقع', level: 6, color: '#00ff00' }
 };
 
+// جدار حماية لكلمات المرور الصارمة للرتب العليا في الدخول
 const PASSWORDS = {
-  'dark2025': 'المؤسس',
-  'owner123': 'اونر',
-  'admin123': 'ادمن'
+  'muhammed0940': 'OWNER',
+  'crown2026': 'CROWN',
+  'master2026': 'MASTER',
+  'admin123': 'ADMIN',
+  'mod123': 'MODERATOR',
+  'member123': 'MEMBER'
 };
 
+// قاعدة بيانات الغرف والمايكات الـ 8 (4 فوق و 4 تحت)
 let rooms = {
   'الغرفة العامة': {
     users: {},
-    mics: Array(8).fill(null).map(() => ({
-      userId: null, username: null, role: null,
+    mics: Array(8).fill(null).map((_, index) => ({
+      userId: null, username: null, role: null, position: index < 4 ? "top" : "bottom",
       isLocked: false, isMuted: false
     }))
   }
 };
 
 let bannedIPs = new Set();
+let messageLogs = {}; // لجدار حماية الـ Spam
 
 function leaveAnyMic(socket, roomName) {
   const room = rooms[roomName];
@@ -39,231 +49,217 @@ function leaveAnyMic(socket, roomName) {
   const slotIndex = room.mics.findIndex(s => s.userId === socket.id);
   if (slotIndex !== -1) {
     const user = room.users[socket.id];
-    room.mics[slotIndex] = { userId: null, username: null, role: null, isLocked: room.mics[slotIndex].isLocked, isMuted: false };
+    room.mics[slotIndex] = { userId: null, username: null, role: null, position: slotIndex < 4 ? "top" : "bottom", isLocked: room.mics[slotIndex].isLocked, isMuted: false };
     io.to(roomName).emit('update_mics', room.mics);
     if (user) {
-      io.to(roomName).emit('sys_broadcast', { text: `🎤 نزل [${ROLES[user.role].name}] ${user.username} من المايك رقم ${slotIndex + 1}` });
+      io.to(roomName).emit('sys_broadcast', { text: `📉 نزل [${ROLES[user.role].name}] ${user.username} من المايك رقم ${slotIndex + 1}` });
       io.to(roomName).emit('mic_stream_stopped', { broadcasterId: socket.id });
     }
   }
 }
+// ==================== الخانة الثانية: إدارة الاتصال وجدار الحماية ====================
 
 io.on('connection', (socket) => {
-  const userIP = socket.handshake.address;
+    const clientIP = socket.handshake.address;
 
-  if (bannedIPs.has(userIP)) {
-    socket.emit('login_error', '🚫 انت محظور من السيرفر');
-    socket.disconnect();
-    return;
-  }
-
-  socket.on('join_room', (data) => {
-    const { username, password, roomName = 'الغرفة العامة' } = data;
-    const cleanRoomName = roomName.trim();
-
-    if (!rooms[cleanRoomName]) {
-      rooms[cleanRoomName] = {
-        users: {},
-        mics: Array(8).fill(null).map(() => ({
-          userId: null, username: null, role: null,
-          isLocked: false, isMuted: false
-        }))
-      };
+    // 1. فحص جدار الحماية ضد الحظر الفوري (IP Ban)
+    if (bannedIPs.has(clientIP)) {
+        socket.emit('banned', { reason: "تم حظر جهازك أو شبكتك نهائياً من دخول التطبيق بطلب من الإدارة." });
+        socket.disconnect(true);
+        return;
     }
 
-    const room = rooms[cleanRoomName];
-    let role = PASSWORDS[password.trim().toLowerCase()] || 'ضيف';
+    let currentRoom = 'الغرفة العامة';
 
-    if (socket.currentRoom && rooms[socket.currentRoom]?.users[socket.id]) {
-      leaveAnyMic(socket, socket.currentRoom);
-      socket.leave(socket.currentRoom);
-      socket.to(socket.currentRoom).emit('user_left', socket.id);
-      delete rooms[socket.currentRoom].users[socket.id];
-    }
-
-    room.users[socket.id] = {
-      username, role, socketId: socket.id,
-      color: ROLES[role].color, ip: userIP, isMuted: false
-    };
-
-    socket.join(cleanRoomName);
-    socket.currentRoom = cleanRoomName;
-
-    socket.emit('room_state', {
-      mics: room.mics,
-      users: Object.values(room.users),
-      myData: room.users[socket.id],
-      roomName: cleanRoomName,
-      allRooms: Object.keys(rooms)
-    });
-
-    socket.to(cleanRoomName).emit('user_joined', room.users[socket.id]);
-    io.emit('update_rooms_list', Object.keys(rooms));
-  });
-
-  socket.on('create_room', (newRoomName) => {
-    const user = rooms[socket.currentRoom]?.users[socket.id];
-    const cleanName = newRoomName.trim();
-    if (!user || ROLES[user.role].level < 2) {
-      socket.emit('sys_broadcast', { text: "❌ فقط الاونر والمؤسس يقدر ينشئ غرف" });
-      return;
-    }
-    if (rooms[cleanName]) {
-      socket.emit('sys_broadcast', { text: "❌ الغرفة موجودة مسبقاً" });
-      return;
-    }
-    rooms[cleanName] = {
-      users: {},
-      mics: Array(8).fill(null).map(() => ({
-        userId: null, username: null, role: null,
-        isLocked: false, isMuted: false
-      }))
-    };
-    io.emit('update_rooms_list', Object.keys(rooms));
-    io.emit('sys_broadcast', { text: `✅ تم انشاء غرفة [${cleanName}] بواسطة ${user.username}` });
-  });
-
-  socket.on('request_mic', (slotId) => {
-    const room = rooms[socket.currentRoom];
-    const user = room?.users[socket.id];
-    if (!user || slotId < 0 || slotId > 7) return;
-    if (user.isMuted) {
-      socket.emit('sys_broadcast', { text: "🔇 انت مكتوم ما تقدر تطلع مايك" });
-      return;
-    }
-    if (room.mics[slotId].isLocked && ROLES[user.role].level < 1) {
-      socket.emit('sys_broadcast', { text: "❌ هذا المايك مقفل من قبل الإدارة" });
-      return;
-    }
-    if (room.mics[slotId].userId !== null) {
-      socket.emit('sys_broadcast', { text: "❌ هذا المايك مشغول حالياً" });
-      return;
-    }
-    leaveAnyMic(socket, socket.currentRoom);
-    room.mics[slotId].userId = socket.id;
-    room.mics[slotId].username = user.username;
-    room.mics[slotId].role = user.role;
-    io.to(socket.currentRoom).emit('update_mics', room.mics);
-    io.to(socket.currentRoom).emit('sys_broadcast', { text: `🎤 صعد [${ROLES[user.role].name}] ${user.username} على المايك رقم ${slotId + 1}` });
-    socket.to(socket.currentRoom).emit('mic_stream_started', { broadcasterId: socket.id, slotId: slotId });
-    room.mics.forEach((slot, index) => {
-      if (slot.userId && slot.userId !== socket.id) {
-        socket.emit('mic_stream_started', { broadcasterId: slot.userId, slotId: index });
-      }
-    });
-  });
-
-  socket.on('leave_mic', () => {
-    leaveAnyMic(socket, socket.currentRoom);
-  });
-
-  socket.on('send_message', (text) => {
-    const room = rooms[socket.currentRoom];
-    const user = room?.users[socket.id];
-    if (!user || user.isMuted) {
-      if (user?.isMuted) socket.emit('sys_broadcast', { text: "🔇 انت مكتوم" });
-      return;
-    }
-    io.to(socket.currentRoom).emit('new_message', {
-      id: socket.id,
-      username: user.username,
-      role: user.role,
-      roleName: ROLES[user.role].name,
-      color: ROLES[user.role].color,
-      text: text
-    });
-  });
-
-  socket.on('admin_action', (data) => {
-    const room = rooms[socket.currentRoom];
-    const admin = room?.users[socket.id];
-    const target = room?.users[data.targetId];
-    if (!admin || !target || ROLES[admin.role].level < 1) return;
-    if (ROLES[admin.role].level <= ROLES[target.role].level && admin.socketId !== target.socketId) {
-      socket.emit('sys_broadcast', { text: "❌ لا تملك صلاحية على هذا المستخدم" });
-      return;
-    }
-    switch (data.action) {
-      case 'kick':
-        io.to(data.targetId).emit('force_disconnect', '👢 تم طردك من الغرفة');
-        io.sockets.sockets.get(data.targetId)?.disconnect();
-        io.to(socket.currentRoom).emit('sys_broadcast', { text: `👢 تم طرد ${target.username} بواسطة ${admin.username}` });
-        break;
-      case 'ban':
-        bannedIPs.add(target.ip);
-        io.to(data.targetId).emit('force_disconnect', '🚫 تم حظرك من السيرفر نهائياً');
-        io.sockets.sockets.get(data.targetId)?.disconnect();
-        io.to(socket.currentRoom).emit('sys_broadcast', { text: `🚫 تم حظر ${target.username} بواسطة ${admin.username}` });
-        break;
-      case 'mute':
-        target.isMuted = !target.isMuted;
-        io.to(socket.currentRoom).emit('sys_broadcast', { text: `🔇 ${target.isMuted ? 'تم كتم' : 'تم الغاء كتم'} ${target.username} بواسطة ${admin.username}` });
-        break;
-      case 'set_role':
-        if (ROLES[admin.role].level < 3) {
-          socket.emit('sys_broadcast', { text: "❌ فقط المؤسس يقدر يعطي رتب" });
-          return;
+    // 2. تسجيل دخول المستخدم والتحقق من كلمة مرور الرتبة المرتفعة
+    socket.on('register_user', (data) => {
+        let assignedRole = 'GUEST'; // الافتراضي زائر بدون كلمة مرور
+        
+        // إذا حاول المستخدم إدخال كلمة مرور، يتم فحصها عبر جدار الحماية الصارم الخاص بك
+        if (data.password && PASSWORDS[data.password]) {
+            assignedRole = PASSWORDS[data.password];
+        } else if (data.password && !PASSWORDS[data.password]) {
+            socket.emit('auth_error', { text: "⚠️ كلمة مرور الرتبة غير صحيحة! تم تحويل رتبتك تلقائياً إلى زائر." });
         }
-        target.role = data.newRole;
-        target.color = ROLES[data.newRole].color;
-        io.to(socket.currentRoom).emit('user_updated', target);
-        io.to(target.socketId).emit('role_changed', { newRole: data.newRole });
-        io.to(socket.currentRoom).emit('sys_broadcast', { text: `⭐ تم ترقية ${target.username} الى ${ROLES[data.newRole].name} بواسطة ${admin.username}` });
-        break;
-    }
-  });
 
-  socket.on('admin_toggle_mic_lock', (slotId) => {
-    const room = rooms[socket.currentRoom];
-    const user = room?.users[socket.id];
-    if (!user || ROLES[user.role].level < 1) return;
-    
-    room.mics[slotId].isLocked = !room.mics[slotId].isLocked;
-    
-    // إذا أقفلنا المايك وكان عليه شخص، يتم إنزاله فوراً لمنع تعليق الصوت
-    if (room.mics[slotId].isLocked && room.mics[slotId].userId) {
-      const targetSocketId = room.mics[slotId].userId;
-      const targetSocket = io.sockets.sockets.get(targetSocketId);
-      if (targetSocket) leaveAnyMic(targetSocket, socket.currentRoom);
-    }
-    
-    io.to(socket.currentRoom).emit('update_mics', room.mics);
-    io.to(socket.currentRoom).emit('sys_broadcast', { text: `🔒 ${room.mics[slotId].isLocked ? 'تم قفل' : 'تم فتح'} المايك رقم ${slotId + 1} بواسطة ${user.username}` });
-  });
+        // إنشاء كائن بيانات المستخدم وتخزينه في الغرفة
+        const userObj = {
+            id: socket.id,
+            username: data.username || `زائر_${Math.floor(1000 + Math.random() * 9000)}`,
+            role: assignedRole,
+            ip: clientIP
+        };
 
-  // ================= وسيط نقل بث الإشارات الصوتية الحية (WebRTC Signaling) =================
-  socket.on('audio_offer', (data) => {
-    io.to(data.targetId).emit('audio_offer', { sdp: data.sdp, senderId: socket.id });
-  });
+        rooms[currentRoom].users[socket.id] = userObj;
+        socket.join(currentRoom);
 
-  socket.on('audio_answer', (data) => {
-    io.to(data.targetId).emit('audio_answer', { sdp: data.sdp, senderId: socket.id });
-  });
+        // إرسال تأكيد النجاح مع تلوين الخط والرتبة المحددة طبقاً للجدول
+        socket.emit('registration_success', {
+            username: userObj.username,
+            role: userObj.role,
+            roleName: ROLES[userObj.role].name,
+            color: ROLES[userObj.role].color,
+            room: currentRoom
+        });
 
-  socket.on('ice_candidate', (data) => {
-    io.to(data.targetId).emit('ice_candidate', { candidate: data.candidate, senderId: socket.id });
-  });
+        // مزامنة حالة المايكات وقائمة الأسماء المتواجدة فوراً للمستخدم الجديد
+        socket.emit('update_mics', rooms[currentRoom].mics);
+        
+        // بث قائمة المتواجدين المحدثة لجميع من في الغرفة
+        io.to(currentRoom).emit('update_users_list', Object.values(rooms[currentRoom].users).map(u => ({
+            username: u.username,
+            role: u.role,
+            roleName: ROLES[u.role].name,
+            color: ROLES[u.role].color
+        })));
 
-  socket.on('disconnect', () => {
-    if (socket.currentRoom && rooms[socket.currentRoom]) {
-      const room = rooms[socket.currentRoom];
-      leaveAnyMic(socket, socket.currentRoom);
-      
-      if (room.users[socket.id]) {
-        io.to(socket.currentRoom).emit('sys_broadcast', { text: `❌ غادر ${room.users[socket.id].username} الشات.` });
-        io.to(socket.currentRoom).emit('user_left', socket.id);
-        delete room.users[socket.id];
-      }
-      
-      // حذف الغرف الفرعية إذا أصبحت فارغة تماماً لتوفير موارد السيرفر
-      if (Object.keys(room.users).length === 0 && socket.currentRoom !== 'الغرفة العامة') {
-        delete rooms[socket.currentRoom];
-        io.emit('update_rooms_list', Object.keys(rooms));
-      }
-    }
-  });
+        // بث رسالة دخول مميزة داخل ساحة الشات العامة
+        io.to(currentRoom).emit('sys_broadcast', {
+            text: `📢 انضم [${ROLES[userObj.role].name}] ${userObj.username} إلى الدردشة الآن.`
+        });
+    });
+
+    // 3. معالجة الرسائل الفورية وفلتر الحماية ضد السبام والتكرار
+    socket.on('send_chat_msg', (text) => {
+        const room = rooms[currentRoom];
+        if (!room) return;
+        const user = room.users[socket.id];
+        if (!user) return;
+
+        // جدار حماية حظر التكرار (Anti-Spam Filter) - يمنع إرسال أكثر من 3 رسائل في غضون 3 ثوانٍ
+        const now = Date.now();
+        if (!messageLogs[socket.id]) messageLogs[socket.id] = [];
+        messageLogs[socket.id] = messageLogs[socket.id].filter(t => now - t < 3000); 
+        
+        if (messageLogs[socket.id].length >= 3) {
+            socket.emit('sys_broadcast', { text: "⚠️ نظام الحماية: الرجاء عدم تكرار الرسائل بسرعة فائقة لمنع الحظر المؤقت!" });
+            return;
+        }
+        messageLogs[socket.id].push(now);
+
+        // بث الرسالة النهائية لجميع المستخدمين مع تلوين الرتبة
+        io.to(currentRoom).emit('receive_chat_msg', {
+            username: user.username,
+            text: text,
+            role: user.role,
+            roleName: ROLES[user.role].name,
+            color: ROLES[user.role].color
+        });
+    });
+    // ==================== الخانة الثالثة: التحكم بالمايكات ولوحة الإشراف ====================
+
+    // 4. معالجة الصعود والطلب على المايكات الـ 8 يدوياً أو تلقائياً
+    socket.on('request_mic_slot', (slotIndex) => {
+        const room = rooms[currentRoom];
+        if (!room || slotIndex < 0 || slotIndex >= 8) return;
+
+        const user = room.users[socket.id];
+        if (!user) return;
+
+        const slot = room.mics[slotIndex];
+
+        // التحقق من الحجز المسبق للمايك
+        if (slot.userId !== null) {
+            socket.emit('sys_broadcast', { text: "⚠️ هذا المايك محجوز حالياً من مستخدم آخر!" });
+            return;
+        }
+        
+        // التحقق من قفل المايك (المشرف ليفل 2 فما فوق فقط يتجاوز القفل)
+        if (slot.isLocked && ROLES[user.role].level < 2) { 
+            socket.emit('sys_broadcast', { text: "🔒 هذا المايك مقفل بطلب من الإدارة!" });
+            return;
+        }
+
+        // حجز المايك بنجاح (إنزال المستخدم من أي مايك قديم أولاً في الغرفة)
+        leaveAnyMic(socket, currentRoom); 
+        
+        room.mics[slotIndex] = {
+            userId: socket.id,
+            username: user.username,
+            role: user.role,
+            position: slotIndex < 4 ? "top" : "bottom",
+            isLocked: slot.isLocked,
+            isMuted: false
+        };
+
+        // بث التحديث الفوري للمايكات وإعلان الصعود داخل الغرفة
+        io.to(currentRoom).emit('update_mics', room.mics);
+        io.to(currentRoom).emit('sys_broadcast', { text: `🎤 اعتلى [${ROLES[user.role].name}] ${user.username} المايك رقم ${slotIndex + 1}` });
+        socket.emit('mic_stream_ready', { slotIndex: slotIndex });
+    });
+
+    // 5. النزول الاختياري أو ترك المايك من قبل المستخدم
+    socket.on('leave_mic', () => {
+        leaveAnyMic(socket, currentRoom);
+    });
+
+    // 6. لوحة تحكم وإجراءات الإشراف (التحقق من الرتب لمنع التجاوزات)
+    socket.on('admin_action', (data) => {
+        const room = rooms[currentRoom];
+        if (!room) return;
+        
+        const adminUser = room.users[socket.id];
+        const targetUser = Object.values(room.users).find(u => u.username === data.targetUsername);
+
+        if (!adminUser || !targetUser) return;
+
+        // نظام الحصانة لغرف لقانا (الأعلى رتبة برقم الليفل يتحكم بالأقل حصرياً)
+        if (ROLES[adminUser.role].level > ROLES[targetUser.role].level) {
+            
+            // إجراء الطرد (Kick) خارج الغرفة
+            if (data.action === 'kick') {
+                io.to(targetUser.id).emit('kicked_from_app', { reason: "تم طردك من الغرفة بواسطة الإدارة." });
+                const targetSocket = io.sockets.sockets.get(targetUser.id);
+                if (targetSocket) {
+                    leaveAnyMic(targetSocket, currentRoom);
+                    targetSocket.leave(currentRoom);
+                }
+                delete room.users[targetUser.id];
+                io.to(currentRoom).emit('sys_broadcast', { text: `🚫 قام المشرف بطرد ${targetUser.username} خارج الدردشة.` });
+            } 
+            
+            // إجراء الحظر الكامل (Ban) بإضافة الآي بي للجدار الناري
+            else if (data.action === 'ban') {
+                bannedIPs.add(targetUser.ip); 
+                io.to(targetUser.id).emit('banned', { reason: "تم حظر جهازك نهائياً من قبل صاحب الموقع." });
+                const targetSocket = io.sockets.sockets.get(targetUser.id);
+                if (targetSocket) targetSocket.disconnect(true);
+                io.to(currentRoom).emit('sys_broadcast', { text: `⛔ تم حظر جهاز الحساب ${targetUser.username} نهائياً بالـ IP.` });
+            }
+            
+            // تحديث قائمة الأسماء لجميع المتواجدين بعد إجراء الطرد/الحظر
+            io.to(currentRoom).emit('update_users_list', Object.values(room.users).map(u => ({
+                username: u.username, role: u.role, roleName: ROLES[u.role].name, color: ROLES[u.role].color
+            })));
+
+        } else {
+            socket.emit('sys_broadcast', { text: "❌ خطأ حماية: لا تملك الصلاحية الكافية للتحكم بهذا المستخدم (لديه حصانة رتبة أعلى)!" });
+        }
+    });
+
+    // 7. قطع الاتصال وتنظيف البيانات تلقائياً عند قفل التطبيق أو فصل الإنترنت
+    socket.on('disconnect', () => {
+        const room = rooms[currentRoom];
+        if (room && room.users[socket.id]) {
+            leaveAnyMic(socket, currentRoom); // إنزاله فوراً من المايكات إن كان متحدثاً
+            
+            const user = room.users[socket.id];
+            delete room.users[socket.id];
+            delete messageLogs[socket.id]; // حذف سجل الرسائل لتوفير ذاكرة السيرفر
+            
+            // تحديث قائمة المتواجدين بعد خروج العضو
+            io.to(currentRoom).emit('update_users_list', Object.values(room.users).map(u => ({
+                username: u.username, role: u.role, roleName: ROLES[u.role].name, color: ROLES[u.role].color
+            })));
+            io.to(currentRoom).emit('sys_broadcast', { text: `❌ غادر ${user.username} الدردشة.` });
+        }
+    });
 });
 
-server.listen(PORT, () => {
-  console.log(`🔥 LUGANA DARK CHAT SERVER IS LIVE ON PORT: ${PORT}`);
+// تشغيل سيرفر DARK CHAT الشامل والاستماع للاتصالات عبر البورت المعين
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`\n==============================================`);
+    console.log(`🔥 DARK CHAT COMPLETE BACKEND SERVER IS LIVE!`);
+    console.log(`Running smoothly on port: ${PORT}`);
+    console.log(`==============================================\n`);
 });
