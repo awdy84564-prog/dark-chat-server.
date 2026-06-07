@@ -4,9 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DARK VIP ROOT - غرف دردشة صوتية</title>
-  <!-- ربط ملف الـ Manifest ليتعرف عليه متصفح الموبايل كتطبيق مستقل -->
+  <!-- ربط ملف الـ Manifest ليتتعرف عليه متصفح الموبايل كتطبيق مستقل -->
   <link rel="manifest" href="/manifest.json">
   <script src="https://socket.io"></script>
+  <!-- مكتبة البث الفوري للصوت الحي عبر سيرفر ريندر مباشرة -->
+  <script src="https://cloudflare.com"></script>
   <style>
     :root { 
       --bg-main: #0a0a0a; 
@@ -69,7 +71,7 @@
     .username-clickable:hover { text-decoration: underline; }
     .msg-sys { color: #888; font-size: 12px; text-align: center; background: rgba(255,255,255,0.03); padding: 6px; border-radius: 6px; margin: 8px auto; max-width: 85%; border: 1px solid #1f1f1f; }
 
-    /* تأثيرات التوهج المضيئة للرتب العالية (مستوحاة من لقانا) */
+    /* تأثيرات التوهج المضيئة للرتب العالية */
     .glow-OWNER { text-shadow: 0 0 5px #00ff00, 0 0 10px #00ff00; font-weight: bold; }
     .glow-CROWN { text-shadow: 0 0 5px #ffd700, 0 0 10px #ffd700; font-weight: bold; }
     .glow-MASTER { text-shadow: 0 0 5px #9933ff, 0 0 10px #9933ff; font-weight: bold; }
@@ -89,7 +91,7 @@
     button.send-btn { background: var(--accent); color: #000; border: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; }
     button.send-btn:hover { background: #e5c100; }
 
-    /* لوحة الإشراف والسياق السريع (طرد وبند) */
+    /* لوحة الإشراف والسياق السريع */
     .admin-menu { position: fixed; background: #181818; border: 1px solid #333; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.6); display: none; flex-direction: column; z-index: 1000; overflow: hidden; min-width: 170px; }
     .admin-menu button { background: transparent; color: white; padding: 10px 15px; border: none; border-bottom: 1px solid #222; text-align: right; width: 100%; font-size: 12px; cursor: pointer; }
     .admin-menu button:hover { background: #252525; color: var(--accent); }
@@ -97,7 +99,7 @@
   </style>
 </head>
 <body>
-  <!-- 1. شاشة الدخول الفخمة المحدثة بجدار حماية كلمات المرور -->
+  <!-- 1. شاشة الدخول الفخمة لـ DARK VIP ROOT بجدار حماية الرتب -->
   <div id="login-screen">
     <div class="login-box">
       <h2>DARK VIP ROOT ✨</h2>
@@ -163,8 +165,10 @@
     let socket;
     let myIdentity = {};
     let targetUserForAdmin = "";
+    let localStream = null;
+    let peers = {}; // لتخزين اتصالات الصوت الحية لجميع الأعضاء
 
-    // رسم وتوليد المايكات الـ 8 وتوزيعها (4 فوق و 4 تحت) تلقائياً عند الإقلاع
+    // توليد شبكة المايكات الـ 8 وتوزيعها تلقائياً عند الإقلاع
     function renderEmptyMics() {
       const topRow = document.getElementById('mic-row-top');
       const bottomRow = document.getElementById('mic-row-bottom');
@@ -188,13 +192,10 @@
 
       if(!name) { alert("من فضلك اكتب الاسم أولاً!"); return; }
 
-      // ======================================================================
-      // ⚠️ تنبيه هام: تم استبدال الرابط المحلي برابط سيرفر Render العالمي المباشر الخاص بك
-      // ======================================================================
+      // الاتصال بسيرفر ريندر العالمي المباشر الخاص بك
       socket = io("https://onrender.com");
 
       socket.on('connect', () => {
-        // إرسال بيانات التسجيل وفحص كلمة مرور الرتبة عبر جدار حماية السيرفر
         socket.emit('register_user', { username: name, password: pass });
       });
 
@@ -203,9 +204,14 @@
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('app-screen').style.display = 'flex';
         document.getElementById('app-title').innerText = `DARK VIP ROOT 💎 (${data.username})`;
+        
+        // تشغيل استقبال المايكروفون في الخلفية
+        navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+          .then(stream => { localStream = stream; })
+          .catch(() => { console.log("⚠️ تم تشغيل الشات في وضع الاستماع فقط (المايك معطل)."); });
       });
 
-      // مزامنة حالة حركة المايكات الـ 8 بشكل حي وفوري من السيرفر
+      // مزامنة حالة المايكات الـ 8 بشكل فوري من السيرفر
       socket.on('update_mics', (micsData) => {
         for(let i=0; i<8; i++) {
           const avatar = document.getElementById(`avatar-${i}`);
@@ -224,7 +230,54 @@
         }
       });
 
-      // تحديث قائمة الأسماء الجانبية للأعضاء المتواجدين فورا بالتأثير المتوهج
+      // استقبال خطوط الصوت الحية للأعضاء الصاعدين للمايك وتوصيلها بالهاتف تلقائياً
+      socket.on('user_joined_mic_stream', data => {
+          if (!localStream) return;
+          const peer = new SimplePeer({ initiator: false, trickle: false, stream: localStream });
+          
+          peer.on('signal', signal => {
+              socket.emit('returning_signal', { signal, callerId: data.userId });
+          });
+
+          peer.on('stream', stream => {
+              const audio = document.createElement('audio');
+              audio.srcObject = stream;
+              audio.play();
+          });
+
+          peer.signal(data.signal);
+          peers[data.userId] = peer;
+      });
+
+      socket.on('user_joined_stream_signal', data => {
+          const peer = new SimplePeer({ initiator: true, trickle: false, stream: localStream });
+          
+          peer.on('signal', signal => {
+              socket.emit('sending_signal', { userToSignal: data.callerId, callerId: socket.id, signal });
+          });
+
+          peer.on('stream', stream => {
+              const audio = document.createElement('audio');
+              audio.srcObject = stream;
+              audio.play();
+          });
+
+          peer.signal(data.signal);
+          peers[data.callerId] = peer;
+      });
+
+      socket.on('received_returned_signal', data => {
+          if (peers[data.id]) peers[data.id].signal(data.signal);
+      });
+
+      socket.on('user_left_mic_stream', data => {
+          if (peers[data.userId]) {
+              peers[data.userId].destroy();
+              delete peers[data.userId];
+          }
+      });
+
+      // تحديث قائمة الأسماء الجانبية للأعضاء
       socket.on('update_users_list', (usersArray) => {
         document.getElementById('user-count').innerText = usersArray.length;
         const box = document.getElementById('users-list-box');
@@ -234,14 +287,12 @@
         });
       });
 
-      // استقبال البث العام لرسائل النظام والدخول والخروج
       socket.on('sys_broadcast', (data) => {
         const list = document.getElementById('messages-list');
         list.innerHTML += `<li class="msg msg-sys">${data.text}</li>`;
         list.scrollTop = list.scrollHeight;
       });
 
-      // استقبال وعرض رسائل الأعضاء مع تفعيل تأثير توهج الرتب اللامعة الفخمة
       socket.on('receive_chat_msg', (data) => {
         const list = document.getElementById('messages-list');
         let glowClass = `glow-${data.role}`;
@@ -255,7 +306,6 @@
         list.scrollTop = list.scrollHeight;
       });
 
-      // معالجة جدار الحماية ضد الأخطاء وإجراءات الطرد والحظر اللحظية
       socket.on('auth_error', (data) => { alert(data.text); });
       socket.on('kicked_from_app', (data) => { alert(data.reason); location.reload(); });
       socket.on('banned', (data) => { alert(data.reason); location.reload(); });
@@ -270,14 +320,12 @@
     }
 
     function checkKey(e) { if(e.key === 'Enter') triggerMessage(); }
-
     function requestMic(slotIndex) { if(socket) socket.emit('request_mic_slot', slotIndex); }
     function leaveCurrentMic() { if(socket) socket.emit('leave_mic'); }
 
-    // لوحة إدارة الإشراف السريعة (تفتح بالضغط على الاسم فقط لأصحاب الرتب الإدارية العليا)
+    // لوحة إدارة الإشراف
     function openAdminPanel(event, targetName) {
       event.preventDefault();
-      // منع الزوار والأعضاء العاديين من فتح لوحة التحكم نهائياً لضمان الحماية
       if(myIdentity.role === 'GUEST' || myIdentity.role === 'MEMBER') return;
       
       targetUserForAdmin = targetName;
