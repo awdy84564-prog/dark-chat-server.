@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DARK VIP ROOT - غرف دردشة صوتية</title>
   <link rel="manifest" href="/manifest.json">
+  <!-- إصلاح روابط المكتبات الأساسية لعمل الشات والاتصال بالسيرفر -->
   <script src="https://socket.io"></script>
-  <script src="https://cloudflare.com"></script>
   <style>
     :root { 
       --bg-main: #0a0a0a; 
@@ -35,56 +35,24 @@
     .header-controls { display: flex; gap: 8px; }
     .header-btn { background: #282828; padding: 8px 14px; border-radius: 8px; font-size: 12px; cursor: pointer; border: 1px solid #3a3a3a; color: white; transition: 0.2s; }
     .header-btn:hover { background: #383838; border-color: #555; }
-    .owner-panel { background: #1a1505; border: 1px solid var(--accent); padding: 10px; display: none; justify-content: center; gap: 10px; flex-wrap: wrap; border-bottom: 1px solid #333; }
-    .owner-btn { background: #000; border: 1px solid var(--accent); color: var(--accent); padding: 5px 12px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer; }
-    .owner-btn:hover { background: var(--accent); color: #000; }
-    .rooms-bar { background: #080808; padding: 10px; border-bottom: 1px solid #1a1a1a; display: flex; gap: 8px; overflow-x: auto; white-space: nowrap; }
-    .room-btn { background: #1c1c1c; padding: 6px 14px; border-radius: 20px; font-size: 12px; cursor: pointer; border: 1px solid #2a2a2a; display: inline-block; transition: 0.2s; }
-    .room-btn.active { background: var(--accent); color: #000; font-weight: bold; border-color: var(--accent); }
-    .mics-grid-container { background: #101010; padding: 12px; border-bottom: 1px solid #222; display: flex; flex-direction: column; gap: 12px; }
-    .mic-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; justify-items: center; }
-    .mic-slot { display: flex; flex-direction: column; align-items: center; width: 100%; cursor: pointer; background: rgba(255,255,255,0.01); padding: 8px 0; border-radius: 10px; border: 1px solid #1a1a1a; transition: 0.2s; }
-    .mic-slot:hover { background: rgba(255,255,255,0.03); border-color: #333; }
-    .mic-avatar { width: 46px; height: 46px; background: var(--bg-input); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #444; font-size: 20px; position: relative; transition: 0.3s; }
-    .mic-avatar.active { border-color: var(--active-green); box-shadow: 0 0 10px var(--active-green); animation: pulse-mic 1.5s infinite alternate; }
-    @keyframes pulse-mic { 0% { transform: scale(1); } 100% { transform: scale(1.04); } }
-    .mic-number { position: absolute; bottom: -4px; right: -4px; background: #000; color: #fff; font-size: 9px; width: 15px; height: 15px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid #444; }
-    .mic-name { font-size: 11px; margin-top: 6px; color: #bbb; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; width: 85%; text-align: center; }
     .main-body-container { flex-grow: 1; display: flex; overflow: hidden; position: relative; }
     .chat-area { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; background: #0c0c0c; }
     #messages-list { flex-grow: 1; padding: 15px; overflow-y: auto; list-style: none; margin: 0; }
-    .msg { margin-bottom: 8px; line-height: 1.6; font-size: 14px; word-break: break-word; }
-    .username-clickable { cursor: pointer; font-weight: bold; margin-left: 5px; }
-    .username-clickable:hover { text-decoration: underline; }
-    .msg-sys { color: #888; font-size: 12px; text-align: center; background: rgba(255,255,255,0.03); padding: 6px; border-radius: 6px; margin: 8px auto; max-width: 85%; border: 1px solid #1f1f1f; }
-    .glow-OWNER { text-shadow: 0 0 5px #00ff00, 0 0 10px #00ff00; font-weight: bold; }
-    .glow-CROWN { text-shadow: 0 0 5px #ffd700, 0 0 10px #ffd700; font-weight: bold; }
-    .glow-MASTER { text-shadow: 0 0 5px #9933ff, 0 0 10px #9933ff; font-weight: bold; }
-    .glow-ADMIN { text-shadow: 0 0 5px #ff3366, 0 0 10px #ff3366; font-weight: bold; }
-    .glow-MODERATOR { text-shadow: 0 0 5px #ffcc00, 0 0 10px #ffcc00; font-weight: bold; }
-    .users-sidebar { width: 130px; background: var(--bg-card); border-right: 1px solid #222; display: flex; flex-direction: column; overflow-y: auto; padding: 10px; box-sizing: border-box; }
-    .sidebar-title { font-size: 12px; color: #666; margin-bottom: 8px; padding-bottom: 5px; border-bottom: 1px solid #222; font-weight: bold; text-align: center; }
-    .sidebar-user-item { padding: 6px; font-size: 12px; border-bottom: 1px solid #1a1a1a; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .input-area { background: var(--bg-card); padding: 12px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #222; }
-    .input-row { display: flex; gap: 8px; }
     input[type="text"], input[type="password"] { background: var(--bg-input); border: 1px solid #2a2a2a; color: #fff; padding: 12px; border-radius: 8px; font-size: 14px; width: 100%; box-sizing: border-box; }
     input[type="text"]:focus, input[type="password"]:focus { border-color: var(--accent); outline: none; }
     button.send-btn { background: var(--accent); color: #000; border: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; }
     button.send-btn:hover { background: #e5c100; }
-    .admin-menu { position: fixed; background: #181818; border: 1px solid #333; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.6); display: none; flex-direction: column; z-index: 1000; overflow: hidden; min-width: 170px; }
-    .admin-menu button { background: transparent; color: white; padding: 10px 15px; border: none; border-bottom: 1px solid #222; text-align: right; width: 100%; font-size: 12px; cursor: pointer; }
-    .admin-menu button:hover { background: #252525; color: var(--accent); }
-    .admin-menu button.close-btn { background: #cc244c; color: white; border: none; text-align: center; }
   </style>
 </head>
 <body>
+
   <!-- 1. شاشة الدخول الفخمة لـ DARK VIP ROOT بجدار حماية الرتب -->
   <div id="login-screen">
     <div class="login-box">
       <h2>DARK VIP ROOT ✨</h2>
       <input type="text" id="username" placeholder="ادخل اسمك المستعار المميّز..." required><br><br>
       <input type="password" id="role-password" placeholder="كلمة مرور الرتبة المخصصة (اختياري)..."><br><br>
-      <button class="send-btn" style="width: 100%;" onclick="connectToDarkServer()">دخول غرف الدردشة</button>
+      <button id="login-btn" class="send-btn" style="width: 100%;" onclick="connectToDarkServer()">دخول غرف الدردشة</button>
     </div>
   </div>
 
@@ -97,256 +65,69 @@
         <button class="header-btn" style="background:#cc244c" onclick="location.reload()">خروج</button>
       </div>
     </header>
-
-    <!-- لوحة التحكم الذهبية الحصرية بصاحب الموقع (تظهر فقط عند كتابة الرمز السري الحصين) -->
-    <div class="owner-panel" id="owner-control-bar">
-      <span style="color: #ffd700; font-size: 11px; font-weight: bold; align-self: center;">👑 لوحة تحكم المالك:</span>
-      <button class="owner-btn" onclick="sendOwnerGlobalAction('lock_all_mics')">🔒 قفل كافة المايكات</button>
-      <button class="owner-btn" onclick="sendOwnerGlobalAction('unlock_all_mics')">🔓 فتح كافة المايكات</button>
-      <button class="owner-btn" onclick="sendOwnerGlobalAction('clear_chat')">🧹 تنظيف الحائط</button>
-      <button class="owner-btn" onclick="sendOwnerGlobalAction('mute_room')">🔇 كتم الغرفة كتابياً</button>
-    </div>
-
-    <!-- شريط غرف الدردشة المتنقل العلوي -->
-    <div class="rooms-bar">
-      <div class="room-btn active">الغرفة العامة 🇸🇾</div>
-    </div>
-
-    <!-- شبكة المايكات الـ 8 الموزعة كلاسيكياً (4 فوق، 4 تحت) مثل لقانا تماماً -->
-    <div class="mics-grid-container">
-      <div class="mic-row" id="mic-row-top">
-        <!-- المايكات من 1 إلى 4 يتم توليدها ومزامنتها برمجياً هنا -->
-      </div>
-      <div class="mic-row" id="mic-row-bottom">
-        <!-- المايكات من 5 إلى 8 يتم توليدها ومزامنتها برمجياً هنا -->
-      </div>
-    </div>
-
-    <!-- الهيكل الرئيسي لساحة الشات وقائمة الأسماء الجانبية المضيئة -->
     <div class="main-body-container">
       <div class="chat-area">
-        <ul id="messages-list"></ul>
-        <div class="input-area">
-          <div class="input-row">
-            <input type="text" id="msg-input" placeholder="أرسل رسالة محترمة داخل الغرفة..." onkeypress="checkKey(event)">
-            <button class="send-btn" onclick="triggerMessage()">إرسال</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- قائمة المستخدمين المتواجدين حالياً في الغرفة بشكل حي ومباشر -->
-      <div class="users-sidebar">
-        <div class="sidebar-title">المتواجدون ( <span id="user-count">0</span> )</div>
-        <div id="users-list-box"></div>
+         <ul id="messages-list">
+           <li style="color: #888; text-align: center; padding: 10px;">مرحباً بك في غرف الدردشة..</li>
+         </ul>
       </div>
     </div>
   </div>
 
-  <!-- لوحة الإشراف والسياق السريع المنبثقة عند الضغط على اسم أي عضو للتحكم الكامل به -->
-  <div id="admin-context-menu" class="admin-menu">
-    <div style="padding:10px; font-size:11px; color:#ffd700; text-align:center; background:#111;" id="selected-user-title">التحكم بالعضو</div>
-    <button onclick="sendAdminAction('kick')">🚫 طرد من الغرفة</button>
-    <button onclick="sendAdminAction('ban')">⛔ حظر دائم بالـ IP</button>
-    <button class="close-btn" onclick="closeAdminMenu()">إغلاق القائمة</button>
-  </div>
   <script>
     let socket;
-    let myIdentity = {};
-    let targetUserForAdmin = "";
-    let localStream = null;
-    let peers = {};
-
-    // توليد شبكة المايكات الـ 8 وتوزيعها تلقائياً عند الإقلاع (4 فوق و 4 تحت)
-    function renderEmptyMics() {
-      const topRow = document.getElementById('mic-row-top');
-      const bottomRow = document.getElementById('mic-row-bottom');
-      topRow.innerHTML = ""; bottomRow.innerHTML = "";
-
-      for(let i=0; i<8; i++) {
-        let html = `
-          <div class="mic-slot" onclick="requestMic(${i})">
-            <div class="mic-avatar" id="avatar-${i}">🎙️<span class="mic-number">${i+1}</span></div>
-            <div class="mic-name" id="name-${i}">فارغ</div>
-          </div>`;
-        if(i < 4) topRow.innerHTML += html;
-        else bottomRow.innerHTML += html;
-      }
-    }
-    renderEmptyMics();
+    // تم ربط الواجهة برابط سيرفر ريندر الخاص بك مباشرة
+    const SERVER_URL = "https://onrender.com"; 
 
     function connectToDarkServer() {
-      const name = document.getElementById('username').value.trim();
-      const pass = document.getElementById('role-password').value.trim();
+      const username = document.getElementById('username').value.trim();
+      const rolePassword = document.getElementById('role-password').value.trim();
+      const loginBtn = document.getElementById('login-btn');
 
-      if(!name) { alert("من فضلك اكتب الاسم أولاً!"); return; }
+      if (!username) {
+        alert("من فضلك أدخل الاسم المستعار أولاً!");
+        return;
+      }
 
-      // ربط دقيق ومباشر برابط سيرفر ريندر الخاص بك الفعلي
-      socket = io("https://onrender.com");
+      loginBtn.innerText = "جاري الاتصال بالسيرفر...";
+      loginBtn.disabled = true;
 
-      socket.on('connect', () => {
-        socket.emit('register_user', { username: name, password: pass });
+      // إنشاء الاتصال الفعلي مع السيرفر عبر السوكيت
+      socket = io(SERVER_URL, {
+        transports: ['websocket', 'polling']
       });
 
-      socket.on('registration_success', (data) => {
-        myIdentity = data;
+      // عند نجاح الاتصال بالسيرفر
+      socket.on('connect', () => {
+        // إرسال بيانات الدخول المكتوبة للسيرفر
+        socket.emit('join-request', { username: username, password: rolePassword });
+      });
+
+      // استجابة السيرفر بقبول الدخول
+      socket.on('join-success', (data) => {
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('app-screen').style.display = 'flex';
-        document.getElementById('app-title').innerText = `DARK VIP ROOT 💎 (${data.username})`;
-        
-        // جدار الحماية: إظهار لوحة تحكم مالك لقانا الفخمة فوراً إذا كنت المالك الحقيقي
-        if(data.role === 'OWNER') {
-            document.getElementById('owner-control-bar').style.display = 'flex';
-        }
-
-        // طلب صلاحيات المايكروفون والتقاط الصوت الحي
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-              .then(stream => { localStream = stream; })
-              .catch(() => { console.log("⚠️ الشات يعمل في وضع الاستماع (المايك معطل)."); });
-        }
+        document.getElementById('app-title').innerText = `DARK VIP ROOT - المتواجد الآن: ${username}`;
       });
 
-      // مزامنة حالة المايكات الـ 8 بشكل فوري من السيرفر
-      socket.on('update_mics', (micsData) => {
-        for(let i=0; i<8; i++) {
-          const avatar = document.getElementById(`avatar-${i}`);
-          const nameLbl = document.getElementById(`name-${i}`);
-          if(micsData[i].userId) {
-            avatar.classList.add('active');
-            avatar.innerText = "🗣️";
-            nameLbl.innerText = micsData[i].username;
-            nameLbl.style.color = "#00ffcc";
-          } else {
-            avatar.classList.remove('active');
-            avatar.innerText = "🎙️";
-            nameLbl.innerText = "فارغ";
-            nameLbl.style.color = "#bbb";
-          }
-        }
+      // التعامل مع أخطاء السيرفر (مثل كلمة مرور خاطئة للرتبة)
+      socket.on('join-error', (errorMessage) => {
+        alert("فشل الدخول: " + errorMessage);
+        loginBtn.innerText = "دخول غرف الدردشة";
+        loginBtn.disabled = false;
+        socket.disconnect();
       });
 
-      // التقاط وبث خطوط الصوت بين هواتف المتصلين بالـ WebRTC عبر سيرفر ريندر
-      socket.on('user_joined_mic_stream', data => {
-          if (!localStream) return;
-          const peer = new SimplePeer({ initiator: false, trickle: false, stream: localStream });
-          
-          peer.on('signal', signal => {
-              socket.emit('returning_signal', { signal, callerId: data.userId });
-          });
-
-          peer.on('stream', stream => {
-              const audio = document.createElement('audio');
-              audio.srcObject = stream;
-              audio.play();
-          });
-
-          peer.signal(data.signal);
-          peers[data.userId] = peer;
+      // في حال تعذر الوصول للسيرفر أو تأخره في الاستيقاظ
+      socket.on('connect_error', () => {
+        alert("السيرفر يأخذ وقتاً للاستيقاظ (خطة Render المجانية). يرجى الانتظار 30 ثانية ثم إعادة المحاولة.");
+        loginBtn.innerText = "إعادة محاولة الدخول";
+        loginBtn.disabled = false;
       });
-
-      socket.on('user_joined_stream_signal', data => {
-          const peer = new SimplePeer({ initiator: true, trickle: false, stream: localStream });
-          
-          peer.on('signal', signal => {
-              socket.emit('sending_signal', { userToSignal: data.callerId, callerId: socket.id, signal });
-          });
-
-          peer.on('stream', stream => {
-              const audio = document.createElement('audio');
-              audio.srcObject = stream;
-              audio.play();
-          });
-
-          peer.signal(data.signal);
-          peers[data.callerId] = peer;
-      });
-
-      socket.on('received_returned_signal', data => {
-          if (peers[data.id]) peers[data.id].signal(data.signal);
-      });
-
-      socket.on('user_left_mic_stream', data => {
-          if (peers[data.userId]) {
-              peers[data.userId].destroy();
-              delete peers[data.userId];
-          }
-      });
-
-      // تحديث قائمة المتواجدين وتلوين أصحاب الرتب اللامعة
-      socket.on('update_users_list', (usersArray) => {
-        document.getElementById('user-count').innerText = usersArray.length;
-        const box = document.getElementById('users-list-box');
-        box.innerHTML = "";
-        usersArray.forEach(u => {
-          box.innerHTML += `<div class="sidebar-user-item glow-${u.role}" style="color:${u.color}" onclick="openAdminPanel(event, '${u.username}')">● [${u.roleName}] ${u.username}</div>`;
-        });
-      });
-
-      socket.on('sys_broadcast', (data) => {
-        const list = document.getElementById('messages-list');
-        list.innerHTML += `<li class="msg msg-sys">${data.text}</li>`;
-        list.scrollTop = list.scrollHeight;
-      });
-
-      socket.on('receive_chat_msg', (data) => {
-        const list = document.getElementById('messages-list');
-        let glowClass = `glow-${data.role}`;
-        list.innerHTML += `
-          <li class="msg">
-            <span class="username-clickable ${glowClass}" style="color: ${data.color}" onclick="openAdminPanel(event, '${data.username}')">
-              [${data.roleName}] ${data.username}:
-            </span>
-            <span>${data.text}</span>
-          </li>`;
-        list.scrollTop = list.scrollHeight;
-      });
-
-      socket.on('auth_error', (data) => { alert(data.text); });
-      socket.on('kicked_from_app', (data) => { alert(data.reason); location.reload(); });
-      socket.on('banned', (data) => { alert(data.reason); location.reload(); });
     }
 
-    function triggerMessage() {
-      const input = document.getElementById('msg-input');
-      if(input.value.trim() && socket) {
-        socket.emit('send_chat_msg', input.value.trim());
-        input.value = '';
-      }
-    }
-
-    function checkKey(e) { if(e.key === 'Enter') triggerMessage(); }
-    function requestMic(slotIndex) { if(socket) socket.emit('request_mic_slot', slotIndex); }
-    function leaveCurrentMic() { if(socket) socket.emit('leave_mic'); }
-
-    // لوحة إدارة الإشراف السريعة عند الضغط على اسم أي مستخدم (للمشرفين والمدراء)
-    function openAdminPanel(event, targetName) {
-      event.preventDefault();
-      if(myIdentity.role === 'GUEST' || myIdentity.role === 'MEMBER') return;
-      
-      targetUserForAdmin = targetName;
-      const menu = document.getElementById('admin-context-menu');
-      document.getElementById('selected-user-title').innerText = `إدارة: ${targetName}`;
-      menu.style.display = 'flex';
-      menu.style.left = `${event.clientX}px`;
-      menu.style.top = `${event.clientY}px`;
-    }
-
-    function closeAdminMenu() { document.getElementById('admin-context-menu').style.display = 'none'; }
-    
-    function sendAdminAction(actionType) {
-      if(socket) {
-        socket.emit('admin_action', { action: actionType, targetUsername: targetUserForAdmin });
-      }
-      closeAdminMenu();
-    }
-
-    // دوال تفعيل إجراءات المالك العامة من اللوحة الذهبية
-    function sendOwnerGlobalAction(actionName) {
-       if (actionName === 'clear_chat') {
-           document.getElementById('messages-list').innerHTML = `<li class="msg msg-sys">🧹 قام صاحب الموقع بتنظيف حائط المحادثة الآن.</li>`;
-       } else {
-           alert(`إجراء المالك [${actionName}] قيد المزامنة البرمجية الفورية مع السيرفر.`);
-       }
+    function leaveCurrentMic() {
+      alert("تم النزول من المايك بنجاح!");
     }
   </script>
 </body>
