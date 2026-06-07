@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DARK CHAT - محاكاة لقانا الكاملة</title>
-  <!-- ربط ملف التثبيت المظهر (Manifest) ليتعرف عليه الهاتف كتطبيق مستقل -->
+  <title>DARK VIP ROOT - غرف دردشة صوتية</title>
+  <!-- ربط ملف الـ Manifest ليتعرف عليه متصفح الموبايل كتطبيق مستقل -->
   <link rel="manifest" href="/manifest.json">
   <script src="https://socket.io"></script>
   <style>
@@ -13,7 +13,7 @@
       --bg-card: #141414; 
       --bg-input: #202020; 
       --text-color: #f0f0f0; 
-      --accent: #ffd700; /* الذهبي الفاخر للرتب العالية */
+      --accent: #ffd700; /* الذهبي الفخم الخاص بـ DARK VIP ROOT */
       --active-green: #00ffcc;
     }
     
@@ -25,12 +25,12 @@
       overflow: hidden;
     }
 
-    /* شاشة الدخول الاحترافية */
+    /* شاشة الدخول الاحترافية بجدار الحماية */
     #login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; padding: 20px; box-sizing: border-box; }
     .login-box { background: var(--bg-card); padding: 30px; border-radius: 16px; width: 100%; max-width: 380px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); border: 1px solid #252525; text-align: center; }
     .login-box h2 { color: var(--accent); margin-bottom: 25px; font-size: 24px; letter-spacing: 1px; }
 
-    /* الشاشة الرئيسية للدردشة */
+    /* الشاشة الرئيسية للدردشة وغرف لقانا */
     #app-screen { display: none; flex-direction: column; height: 100vh; }
     
     header { 
@@ -42,12 +42,12 @@
     .header-btn { background: #282828; padding: 8px 14px; border-radius: 8px; font-size: 12px; cursor: pointer; border: 1px solid #3a3a3a; color: white; transition: 0.2s; }
     .header-btn:hover { background: #383838; border-color: #555; }
 
-    /* شريط الغرف المتنقل */
+    /* شريط الغرف المتنقل العلوي */
     .rooms-bar { background: #080808; padding: 10px; border-bottom: 1px solid #1a1a1a; display: flex; gap: 8px; overflow-x: auto; white-space: nowrap; }
     .room-btn { background: #1c1c1c; padding: 6px 14px; border-radius: 20px; font-size: 12px; cursor: pointer; border: 1px solid #2a2a2a; display: inline-block; transition: 0.2s; }
     .room-btn.active { background: var(--accent); color: #000; font-weight: bold; border-color: var(--accent); }
 
-    /* منصة المايكات الـ 8 (4 فوق و 4 تحت) */
+    /* منصة المايكات الـ 8 الموزعة (4 فوق و 4 تحت) */
     .mics-grid-container { background: #101010; padding: 12px; border-bottom: 1px solid #222; display: flex; flex-direction: column; gap: 12px; }
     .mic-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; justify-items: center; }
     .mic-slot { display: flex; flex-direction: column; align-items: center; width: 100%; cursor: pointer; background: rgba(255,255,255,0.01); padding: 8px 0; border-radius: 10px; border: 1px solid #1a1a1a; transition: 0.2s; }
@@ -58,10 +58,10 @@
     .mic-number { position: absolute; bottom: -4px; right: -4px; background: #000; color: #fff; font-size: 9px; width: 15px; height: 15px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid #444; }
     .mic-name { font-size: 11px; margin-top: 6px; color: #bbb; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; width: 85%; text-align: center; }
 
-    /* الهيكل الرئيسي للشات والأسماء */
+    /* الهيكل الرئيسي للشات وقائمة الأسماء الجانبية */
     .main-body-container { flex-grow: 1; display: flex; overflow: hidden; position: relative; }
     
-    /* شاشة الرسائل والمحادثة */
+    /* ساحة الشات والرسائل الفورية */
     .chat-area { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; background: #0c0c0c; }
     #messages-list { flex-grow: 1; padding: 15px; overflow-y: auto; list-style: none; margin: 0; }
     .msg { margin-bottom: 8px; line-height: 1.6; font-size: 14px; word-break: break-word; }
@@ -69,19 +69,19 @@
     .username-clickable:hover { text-decoration: underline; }
     .msg-sys { color: #888; font-size: 12px; text-align: center; background: rgba(255,255,255,0.03); padding: 6px; border-radius: 6px; margin: 8px auto; max-width: 85%; border: 1px solid #1f1f1f; }
 
-    /* تأثيرات توهج الرتب اللامعة الفخمة الخاصة بلقانا */
+    /* تأثيرات التوهج المضيئة للرتب العالية (مستوحاة من لقانا) */
     .glow-OWNER { text-shadow: 0 0 5px #00ff00, 0 0 10px #00ff00; font-weight: bold; }
     .glow-CROWN { text-shadow: 0 0 5px #ffd700, 0 0 10px #ffd700; font-weight: bold; }
     .glow-MASTER { text-shadow: 0 0 5px #9933ff, 0 0 10px #9933ff; font-weight: bold; }
     .glow-ADMIN { text-shadow: 0 0 5px #ff3366, 0 0 10px #ff3366; font-weight: bold; }
     .glow-MODERATOR { text-shadow: 0 0 5px #ffcc00, 0 0 10px #ffcc00; font-weight: bold; }
 
-    /* قائمة المستخدمين المتواجدين الجانبية */
+    /* قائمة المستخدمين المتواجدين الجانبية المحدثة */
     .users-sidebar { width: 130px; background: var(--bg-card); border-right: 1px solid #222; display: flex; flex-direction: column; overflow-y: auto; padding: 10px; box-sizing: border-box; }
     .sidebar-title { font-size: 12px; color: #666; margin-bottom: 8px; padding-bottom: 5px; border-bottom: 1px solid #222; font-weight: bold; text-align: center; }
     .sidebar-user-item { padding: 6px; font-size: 12px; border-bottom: 1px solid #1a1a1a; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-    /* صندوق المدخلات السفلي للشات */
+    /* صندوق المدخلات السفلي وسهم الإرسال */
     .input-area { background: var(--bg-card); padding: 12px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #222; }
     .input-row { display: flex; gap: 8px; }
     input[type="text"], input[type="password"] { background: var(--bg-input); border: 1px solid #2a2a2a; color: #fff; padding: 12px; border-radius: 8px; font-size: 14px; width: 100%; box-sizing: border-box; }
@@ -89,7 +89,7 @@
     button.send-btn { background: var(--accent); color: #000; border: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; }
     button.send-btn:hover { background: #e5c100; }
 
-    /* قائمة الإشراف المنبثقة للتحكم */
+    /* لوحة الإشراف والسياق السريع (طرد وبند) */
     .admin-menu { position: fixed; background: #181818; border: 1px solid #333; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.6); display: none; flex-direction: column; z-index: 1000; overflow: hidden; min-width: 170px; }
     .admin-menu button { background: transparent; color: white; padding: 10px 15px; border: none; border-bottom: 1px solid #222; text-align: right; width: 100%; font-size: 12px; cursor: pointer; }
     .admin-menu button:hover { background: #252525; color: var(--accent); }
@@ -100,39 +100,39 @@
   <!-- 1. شاشة الدخول الفخمة المحدثة بجدار حماية كلمات المرور -->
   <div id="login-screen">
     <div class="login-box">
-      <h2>DARK CHAT ✨</h2>
-      <input type="text" id="username" placeholder="ادخل اسمك المستعار..." required><br><br>
+      <h2>DARK VIP ROOT ✨</h2>
+      <input type="text" id="username" placeholder="ادخل اسمك المستعار المميّز..." required><br><br>
       <input type="password" id="role-password" placeholder="كلمة مرور الرتبة المخصصة (اختياري)..."><br><br>
       <button class="send-btn" style="width: 100%;" onclick="connectToDarkServer()">دخول غرف الدردشة</button>
     </div>
   </div>
 
-  <!-- 2. الشاشة الأساسية للتطبيق بعد تجاوز جدار الحماية -->
+  <!-- 2. الشاشة الأساسية للتطبيق بعد تجاوز جدار الحماية بنجاح -->
   <div id="app-screen">
     <header>
-      <h3 id="app-title">تطبيق DARK CHAT</h3>
+      <h3 id="app-title">تطبيق DARK VIP ROOT</h3>
       <div class="header-controls">
         <button class="header-btn" onclick="leaveCurrentMic()">📉 نزول من المايك</button>
         <button class="header-btn" style="background:#cc244c" onclick="location.reload()">خروج</button>
       </div>
     </header>
 
-    <!-- شريط الغرف المتنقل العلوي -->
+    <!-- شريط غرف الدردشة المتنقل العلوي -->
     <div class="rooms-bar">
       <div class="room-btn active">الغرفة العامة 🇸🇾</div>
     </div>
 
-    <!-- شبكة المايكات الـ 8 الموزعة كلاسيكياً (4 فوق، 4 تحت) مثل لقانا -->
+    <!-- شبكة المايكات الـ 8 الموزعة كلاسيكياً مثل لقانا (4 فوق، 4 تحت) -->
     <div class="mics-grid-container">
       <div class="mic-row" id="mic-row-top">
-        <!-- المايكات من 1 إلى 4 يتم توليدها برمجياً هنا -->
+        <!-- المايكات من 1 إلى 4 يتم توليدها ومزامنتها برمجياً هنا -->
       </div>
       <div class="mic-row" id="mic-row-bottom">
-        <!-- المايكات من 5 إلى 8 يتم توليدها برمجياً هنا -->
+        <!-- المايكات من 5 إلى 8 يتم توليدها ومزامنتها برمجياً هنا -->
       </div>
     </div>
 
-    <!-- منطقة الشات الوسطى + القائمة الجانبية الحية للأعضاء -->
+    <!-- الهيكل الرئيسي لساحة الشات وقائمة الأسماء الجانبية المضيئة -->
     <div class="main-body-container">
       <div class="chat-area">
         <ul id="messages-list"></ul>
@@ -144,7 +144,7 @@
         </div>
       </div>
 
-      <!-- قائمة المستخدمين المتواجدين حالياً في الغرفة -->
+      <!-- قائمة المستخدمين المتواجدين حالياً في الغرفة بشكل حي ومباشر -->
       <div class="users-sidebar">
         <div class="sidebar-title">المتواجدون ( <span id="user-count">0</span> )</div>
         <div id="users-list-box"></div>
@@ -152,7 +152,7 @@
     </div>
   </div>
 
-  <!-- لوحة الإشراف المنبثقة عند الضغط على اسم أي عضو في الشات -->
+  <!-- لوحة الإشراف والسياق السريع المنبثقة عند الضغط على اسم أي عضو -->
   <div id="admin-context-menu" class="admin-menu">
     <div style="padding:10px; font-size:11px; color:#ffd700; text-align:center; background:#111;" id="selected-user-title">التحكم بالعضو</div>
     <button onclick="sendAdminAction('kick')">🚫 طرد من الغرفة</button>
@@ -188,11 +188,13 @@
 
       if(!name) { alert("من فضلك اكتب الاسم أولاً!"); return; }
 
-      // الاتصال بسيرفر التيرمكس المحلي (استبدله برابط ريندر العالمي عند الرفع النهائي)
-      socket = io("http://localhost:3000");
+      // ======================================================================
+      // ⚠️ تنبيه هام: تم استبدال الرابط المحلي برابط سيرفر Render العالمي المباشر الخاص بك
+      // ======================================================================
+      socket = io("https://onrender.com");
 
       socket.on('connect', () => {
-        // إرسال بيانات التسجيل وفحص كلمة مرور الرتبة عبر السيرفر
+        // إرسال بيانات التسجيل وفحص كلمة مرور الرتبة عبر جدار حماية السيرفر
         socket.emit('register_user', { username: name, password: pass });
       });
 
@@ -200,10 +202,10 @@
         myIdentity = data;
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('app-screen').style.display = 'flex';
-        document.getElementById('app-title').innerText = `LUGANA DARK CHAT 💎 (${data.username})`;
+        document.getElementById('app-title').innerText = `DARK VIP ROOT 💎 (${data.username})`;
       });
 
-      // مزامنة حالة حركة المايكات الـ 8 بشكل حي وفوري
+      // مزامنة حالة حركة المايكات الـ 8 بشكل حي وفوري من السيرفر
       socket.on('update_mics', (micsData) => {
         for(let i=0; i<8; i++) {
           const avatar = document.getElementById(`avatar-${i}`);
@@ -222,7 +224,7 @@
         }
       });
 
-      // تحديث قائمة الأسماء الجانبية للأعضاء المتواجدين فورا
+      // تحديث قائمة الأسماء الجانبية للأعضاء المتواجدين فورا بالتأثير المتوهج
       socket.on('update_users_list', (usersArray) => {
         document.getElementById('user-count').innerText = usersArray.length;
         const box = document.getElementById('users-list-box');
@@ -239,7 +241,7 @@
         list.scrollTop = list.scrollHeight;
       });
 
-      // استقبال وعرض رسائل الأعضاء مع الرتب المتوهجة
+      // استقبال وعرض رسائل الأعضاء مع تفعيل تأثير توهج الرتب اللامعة الفخمة
       socket.on('receive_chat_msg', (data) => {
         const list = document.getElementById('messages-list');
         let glowClass = `glow-${data.role}`;
@@ -253,7 +255,7 @@
         list.scrollTop = list.scrollHeight;
       });
 
-      // معالجة الأخطاء وإجراءات الطرد والحظر اللحظية
+      // معالجة جدار الحماية ضد الأخطاء وإجراءات الطرد والحظر اللحظية
       socket.on('auth_error', (data) => { alert(data.text); });
       socket.on('kicked_from_app', (data) => { alert(data.reason); location.reload(); });
       socket.on('banned', (data) => { alert(data.reason); location.reload(); });
@@ -272,10 +274,10 @@
     function requestMic(slotIndex) { if(socket) socket.emit('request_mic_slot', slotIndex); }
     function leaveCurrentMic() { if(socket) socket.emit('leave_mic'); }
 
-    // لوحة إدارة الإشراف السريعة (تفتح بالضغط على الاسم فقط لأصحاب الرتب العالية)
+    // لوحة إدارة الإشراف السريعة (تفتح بالضغط على الاسم فقط لأصحاب الرتب الإدارية العليا)
     function openAdminPanel(event, targetName) {
       event.preventDefault();
-      // منع الزوار والأعضاء العاديين من فتح لوحة التحكم نهائياً
+      // منع الزوار والأعضاء العاديين من فتح لوحة التحكم نهائياً لضمان الحماية
       if(myIdentity.role === 'GUEST' || myIdentity.role === 'MEMBER') return;
       
       targetUserForAdmin = targetName;
