@@ -1,12 +1,6 @@
-# تجاهل مجلد المكتبات الضخم (ريندر سيقوم بتثبيته تلقائياً)
 node_modules/
-
-# تجاهل ملفات الحزم المؤقتة وسجلات الأخطاء
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.eslintcache
-
-# تجاهل ملفات النظام المؤقتة للأجهزة
 .DS_Store
 Thumbs.db
