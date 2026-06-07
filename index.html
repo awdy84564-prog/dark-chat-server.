@@ -4,11 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DARK VIP ROOT - غرف دردشة صوتية</title>
-  <!-- ربط ملف الـ Manifest ليتتعرف عليه متصفح الموبايل كتطبيق مستقل -->
+  <!-- ربط ملف الـ Manifest ليتعرف عليه متصفح الموبايل كتطبيق مستقل -->
   <link rel="manifest" href="/manifest.json">
+  
+  <!-- إصلاح روابط المكاتب البرمجية الأساسية للاتصال وبث الصوت -->
   <script src="https://socket.io"></script>
-  <!-- مكتبة البث الفوري للصوت الحي عبر سيرفر ريندر مباشرة -->
   <script src="https://cloudflare.com"></script>
+  
   <style>
     :root { 
       --bg-main: #0a0a0a; 
@@ -78,7 +80,7 @@
     .glow-ADMIN { text-shadow: 0 0 5px #ff3366, 0 0 10px #ff3366; font-weight: bold; }
     .glow-MODERATOR { text-shadow: 0 0 5px #ffcc00, 0 0 10px #ffcc00; font-weight: bold; }
 
-    /* قائمة المستخدمين المتواجدين الجانبية المحدثة */
+    /* قائمة المستخدمين الجانبية */
     .users-sidebar { width: 130px; background: var(--bg-card); border-right: 1px solid #222; display: flex; flex-direction: column; overflow-y: auto; padding: 10px; box-sizing: border-box; }
     .sidebar-title { font-size: 12px; color: #666; margin-bottom: 8px; padding-bottom: 5px; border-bottom: 1px solid #222; font-weight: bold; text-align: center; }
     .sidebar-user-item { padding: 6px; font-size: 12px; border-bottom: 1px solid #1a1a1a; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -99,6 +101,7 @@
   </style>
 </head>
 <body>
+
   <!-- 1. شاشة الدخول الفخمة لـ DARK VIP ROOT بجدار حماية الرتب -->
   <div id="login-screen">
     <div class="login-box">
@@ -124,13 +127,13 @@
       <div class="room-btn active">الغرفة العامة 🇸🇾</div>
     </div>
 
-    <!-- شبكة المايكات الـ 8 الموزعة كلاسيكياً مثل لقانا (4 فوق، 4 تحت) -->
+    <!-- شبكة المايكات الـ 8 الموزعة كلاسيكياً (4 فوق، 4 تحت) -->
     <div class="mics-grid-container">
       <div class="mic-row" id="mic-row-top">
-        <!-- المايكات من 1 إلى 4 يتم توليدها ومزامنتها برمجياً هنا -->
+        <!-- المايكات من 1 إلى 4 -->
       </div>
       <div class="mic-row" id="mic-row-bottom">
-        <!-- المايكات من 5 إلى 8 يتم توليدها ومزامنتها برمجياً هنا -->
+        <!-- المايكات من 5 إلى 8 -->
       </div>
     </div>
 
@@ -161,12 +164,13 @@
     <button onclick="sendAdminAction('ban')">⛔ حظر دائم بالـ IP</button>
     <button class="close-btn" onclick="closeAdminMenu()">إغلاق القائمة</button>
   </div>
+
   <script>
     let socket;
     let myIdentity = {};
     let targetUserForAdmin = "";
     let localStream = null;
-    let peers = {}; // لتخزين اتصالات الصوت الحية لجميع الأعضاء
+    let peers = {};
 
     // توليد شبكة المايكات الـ 8 وتوزيعها تلقائياً عند الإقلاع
     function renderEmptyMics() {
@@ -192,9 +196,8 @@
 
       if(!name) { alert("من فضلك اكتب الاسم أولاً!"); return; }
 
-      // الاتصال بسيرفر ريندر العالمي المباشر الخاص بك
-      socket = io("https://dark-chat-server.onrender.com");
-
+      // الربط التلقائي والنهائي برابط سيرفر ريندر الفعلي الخاص بك
+      socket = io("https://onrender.com");
 
       socket.on('connect', () => {
         socket.emit('register_user', { username: name, password: pass });
@@ -206,13 +209,12 @@
         document.getElementById('app-screen').style.display = 'flex';
         document.getElementById('app-title').innerText = `DARK VIP ROOT 💎 (${data.username})`;
         
-        // تشغيل استقبال المايكروفون في الخلفية
+        // طلب صلاحيات المايكروفون للبث الحي
         navigator.mediaDevices.getUserMedia({ audio: true, video: false })
           .then(stream => { localStream = stream; })
-          .catch(() => { console.log("⚠️ تم تشغيل الشات في وضع الاستماع فقط (المايك معطل)."); });
+          .catch(() => { console.log("⚠️ الشات يعمل في وضع الاستماع فقط."); });
       });
 
-      // مزامنة حالة المايكات الـ 8 بشكل فوري من السيرفر
       socket.on('update_mics', (micsData) => {
         for(let i=0; i<8; i++) {
           const avatar = document.getElementById(`avatar-${i}`);
@@ -231,7 +233,6 @@
         }
       });
 
-      // استقبال خطوط الصوت الحية للأعضاء الصاعدين للمايك وتوصيلها بالهاتف تلقائياً
       socket.on('user_joined_mic_stream', data => {
           if (!localStream) return;
           const peer = new SimplePeer({ initiator: false, trickle: false, stream: localStream });
@@ -278,7 +279,6 @@
           }
       });
 
-      // تحديث قائمة الأسماء الجانبية للأعضاء
       socket.on('update_users_list', (usersArray) => {
         document.getElementById('user-count').innerText = usersArray.length;
         const box = document.getElementById('users-list-box');
@@ -324,7 +324,6 @@
     function requestMic(slotIndex) { if(socket) socket.emit('request_mic_slot', slotIndex); }
     function leaveCurrentMic() { if(socket) socket.emit('leave_mic'); }
 
-    // لوحة إدارة الإشراف
     function openAdminPanel(event, targetName) {
       event.preventDefault();
       if(myIdentity.role === 'GUEST' || myIdentity.role === 'MEMBER') return;
