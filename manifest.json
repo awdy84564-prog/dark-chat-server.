@@ -1,24 +1,24 @@
 {
-  "name": "LUGANA DARK CHAT",
-  "short_name": "LUGANA",
-  "description": "دردشة صوتية مباشرة بصلاحيات كاملة",
-  "start_url": "/",
+  "name": "DARK VIP ROOT - لـقـانـا الـمـطـوّر",
+  "short_name": "DARK VIP ROOT",
+  "description": "دردشة غرف صوتية وكتابية مباشرة بصلاحيات ورتب كاملة مرفوعة على سيرفر مستقل",
+  "start_url": "/index.html",
   "display": "standalone",
-  "background_color": "#0b0b0b",
-  "theme_color": "#FFD700",
+  "background_color": "#0a0a0a",
+  "theme_color": "#ffd700",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/847/847969.png",
+      "src": "https://flaticon.com",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/847/847969.png",
+      "src": "https://flaticon.com",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ]
 }
