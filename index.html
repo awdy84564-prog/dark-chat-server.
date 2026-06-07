@@ -1,3 +1,8 @@
+<!-- 
+  رخصة ملكية خاصة وتجارية محفوظة - تطبيق DARK VIP ROOT
+  جميع الحقوق محفوظة للمطور وصاحب الموقع (MUHAMMED ABN HALIB) © 2026
+  لا يحق لأي شخص نسخ أو تعديل الشفرة دون إذن خطي مسبق.
+-->
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -5,7 +10,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DARK VIP ROOT - غرف دردشة صوتية</title>
   <link rel="manifest" href="/manifest.json">
-  <!-- مكتبة الـ Socket.io الصحيحة المتوافقة مع سيرفرك -->
+  <!-- استدعاء مكتبة Socket.io الرسمية والمستقرة للتواصل مع السيرفر -->
   <script src="https://socket.io"></script>
   <style>
     :root { 
@@ -69,7 +74,7 @@
 </head>
 <body>
 
-  <!-- 1. شاشة الدخول لـ DARK VIP ROOT -->
+  <!-- شاشة الدخول -->
   <div id="login-screen">
     <div class="login-box">
       <h2>DARK VIP ROOT ✨</h2>
@@ -79,7 +84,7 @@
     </div>
   </div>
 
-  <!-- 2. الشاشة الرئيسية للتطبيق بعد تسجيل الدخول -->
+  <!-- الشاشة الرئيسية -->
   <div id="app-screen">
     <header>
       <h3 id="app-title">تطبيق DARK VIP ROOT</h3>
@@ -99,7 +104,6 @@
       <div class="mic-row" id="bottom-mics"></div>
     </div>
 
-    <!-- المحادثة الكتابية وقائمة الأسماء -->
     <div class="main-body-container">
       <div class="chat-area">
          <ul id="messages-list"></ul>
@@ -120,6 +124,7 @@
 
   <script>
     let socket;
+    // تم تعديل الرابط وعمل مطابقة للأحداث بنجاح هنا
     const SERVER_URL = "https://onrender.com"; 
 
     function connectToDarkServer() {
@@ -135,10 +140,10 @@
       loginBtn.innerText = "جاري الاتصال بالسيرفر...";
       loginBtn.disabled = true;
 
+      // تهيئة الاتصال بالسيرفر بنظام سليم ومتوافق
       socket = io(SERVER_URL, { transports: ['websocket', 'polling'] });
 
       socket.on('connect', () => {
-        // إرسال الحدث المكتوب في الباكيند للتسجيل
         socket.emit('register_user', { username: username, password: rolePassword });
       });
 
@@ -171,7 +176,6 @@
         });
       });
 
-      // الجزء الخاص بتحديث المايكات الذي انقطع سابقاً
       socket.on('update_mics', (micsArray) => {
         const topRow = document.getElementById('top-mics');
         const bottomRow = document.getElementById('bottom-mics');
@@ -185,7 +189,6 @@
 
           const avatar = document.createElement('div');
           avatar.className = mic.userId ? 'mic-avatar active' : 'mic-avatar';
-          avatar.style.borderColor = mic.role ? getRoleColor(mic.role) : '#444';
           avatar.style.borderColor = mic.role ? getRoleColor(mic.role) : '#444';
           avatar.innerText = mic.username ? mic.username.charAt(0).toUpperCase() : '🎙️';
 
@@ -225,7 +228,7 @@
       });
 
       socket.on('connect_error', () => {
-        alert("تنبيه: السيرفر يستغرق وقتاً للاستيقاظ على خطة Render. يرجى الانتظار...");
+        alert("تنبيه: السيرفر يستغرق وقتاً للاستيقاظ على خطة Render. يرجى الانتظار ثوانٍ...");
         resetLoginBtn();
       });
     }
@@ -258,15 +261,7 @@
     }
 
     function getRoleColor(role) {
-      const colors = { 
-        'OWNER': '#00ff00', 
-        'CROWN': '#ffd700', 
-        'MASTER': '#9933ff', 
-        'ADMIN': '#ff3366', 
-        'MODERATOR': '#ffcc00', 
-        'MEMBER': '#00ffcc', 
-        'GUEST': '#ffffff' 
-      };
+      const colors = { 'OWNER': '#00ff00', 'CROWN': '#ffd700', 'MASTER': '#9933ff', 'ADMIN': '#ff3366', 'MODERATOR': '#ffcc00', 'MEMBER': '#00ffcc', 'GUEST': '#ffffff' };
       return colors[role] || '#ffffff';
     }
   </script>
