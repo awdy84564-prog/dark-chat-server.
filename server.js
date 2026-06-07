@@ -37,7 +37,7 @@ function leaveAnyMic(socket, roomName) {
   const room = rooms[roomName];
   if (!room) return;
   const slotIndex = room.mics.findIndex(s => s.userId === socket.id);
-  if (slotIndex!== -1) {
+  if (slotIndex !== -1) {
     const user = room.users[socket.id];
     room.mics[slotIndex] = { userId: null, username: null, role: null, isLocked: room.mics[slotIndex].isLocked, isMuted: false };
     io.to(roomName).emit('update_mics', room.mics);
@@ -72,13 +72,11 @@ io.on('connection', (socket) => {
     }
 
     const room = rooms[cleanRoomName];
-    // تعديل 1: نشيل المسافات ونخلي سمول عشان الباسوورد ما تعلق
     let role = PASSWORDS[password.trim().toLowerCase()] || 'ضيف';
 
     if (socket.currentRoom && rooms[socket.currentRoom]?.users[socket.id]) {
       leaveAnyMic(socket, socket.currentRoom);
       socket.leave(socket.currentRoom);
-      // تعديل 2: نرسل حدث خروج عشان ينشال من القائمة
       socket.to(socket.currentRoom).emit('user_left', socket.id);
       delete rooms[socket.currentRoom].users[socket.id];
     }
@@ -137,7 +135,7 @@ io.on('connection', (socket) => {
       socket.emit('sys_broadcast', { text: "❌ هذا المايك مقفل من قبل الإدارة" });
       return;
     }
-    if (room.mics[slotId].userId!== null) {
+    if (room.mics[slotId].userId !== null) {
       socket.emit('sys_broadcast', { text: "❌ هذا المايك مشغول حالياً" });
       return;
     }
@@ -149,7 +147,7 @@ io.on('connection', (socket) => {
     io.to(socket.currentRoom).emit('sys_broadcast', { text: `🎤 صعد [${ROLES[user.role].name}] ${user.username} على المايك رقم ${slotId + 1}` });
     socket.to(socket.currentRoom).emit('mic_stream_started', { broadcasterId: socket.id, slotId: slotId });
     room.mics.forEach((slot, index) => {
-      if (slot.userId && slot.userId!== socket.id) {
+      if (slot.userId && slot.userId !== socket.id) {
         socket.emit('mic_stream_started', { broadcasterId: slot.userId, slotId: index });
       }
     });
@@ -180,8 +178,8 @@ io.on('connection', (socket) => {
     const room = rooms[socket.currentRoom];
     const admin = room?.users[socket.id];
     const target = room?.users[data.targetId];
-    if (!admin ||!target || ROLES[admin.role].level < 1) return;
-    if (ROLES[admin.role].level <= ROLES[target.role].level && admin.socketId!== target.socketId) {
+    if (!admin || !target || ROLES[admin.role].level < 1) return;
+    if (ROLES[admin.role].level <= ROLES[target.role].level && admin.socketId !== target.socketId) {
       socket.emit('sys_broadcast', { text: "❌ لا تملك صلاحية على هذا المستخدم" });
       return;
     }
@@ -198,8 +196,8 @@ io.on('connection', (socket) => {
         io.to(socket.currentRoom).emit('sys_broadcast', { text: `🚫 تم حظر ${target.username} بواسطة ${admin.username}` });
         break;
       case 'mute':
-        target.isMuted =!target.isMuted;
-        io.to(socket.currentRoom).emit('sys_broadcast', { text: `🔇 ${target.isMuted? 'تم كتم' : 'تم الغاء كتم'} ${target.username} بواسطة ${admin.username}` });
+        target.isMuted = !target.isMuted;
+        io.to(socket.currentRoom).emit('sys_broadcast', { text: `🔇 ${target.isMuted ? 'تم كتم' : 'تم الغاء كتم'} ${target.username} بواسطة ${admin.username}` });
         break;
       case 'set_role':
         if (ROLES[admin.role].level < 3) {
@@ -219,34 +217,53 @@ io.on('connection', (socket) => {
     const room = rooms[socket.currentRoom];
     const user = room?.users[socket.id];
     if (!user || ROLES[user.role].level < 1) return;
-    room.mics[slotId].isLocked =!room.mics[slotId].isLocked;
+    
+    room.mics[slotId].isLocked = !room.mics[slotId].isLocked;
+    
+    // إذا أقفلنا المايك وكان عليه شخص، يتم إنزاله فوراً لمنع تعليق الصوت
+    if (room.mics[slotId].isLocked && room.mics[slotId].userId) {
+      const targetSocketId = room.mics[slotId].userId;
+      const targetSocket = io.sockets.sockets.get(targetSocketId);
+      if (targetSocket) leaveAnyMic(targetSocket, socket.currentRoom);
+    }
+    
     io.to(socket.currentRoom).emit('update_mics', room.mics);
-    io.to(socket.currentRoom).emit('sys_broadcast', { text: `${room.mics[slotId].isLocked? '🔒' : '🔓'} المايك ${slotId + 1} ${room.mics[slotId].isLocked? 'تقفل' : 'تفتح'} بواسطة ${user.username}` });
+    io.to(socket.currentRoom).emit('sys_broadcast', { text: `🔒 ${room.mics[slotId].isLocked ? 'تم قفل' : 'تم فتح'} المايك رقم ${slotId + 1} بواسطة ${user.username}` });
   });
 
-  socket.on('webrtc_offer', (data) => {
-    io.to(data.to).emit('webrtc_offer', { offer: data.offer, from: socket.id });
+  // ================= وسيط نقل بث الإشارات الصوتية الحية (WebRTC Signaling) =================
+  socket.on('audio_offer', (data) => {
+    io.to(data.targetId).emit('audio_offer', { sdp: data.sdp, senderId: socket.id });
   });
-  socket.on('webrtc_answer', (data) => {
-    io.to(data.to).emit('webrtc_answer', { answer: data.answer, from: socket.id });
+
+  socket.on('audio_answer', (data) => {
+    io.to(data.targetId).emit('audio_answer', { sdp: data.sdp, senderId: socket.id });
   });
-  socket.on('webrtc_ice_candidate', (data) => {
-    io.to(data.to).emit('webrtc_ice_candidate', { candidate: data.candidate, from: socket.id });
+
+  socket.on('ice_candidate', (data) => {
+    io.to(data.targetId).emit('ice_candidate', { candidate: data.candidate, senderId: socket.id });
   });
 
   socket.on('disconnect', () => {
     if (socket.currentRoom && rooms[socket.currentRoom]) {
+      const room = rooms[socket.currentRoom];
       leaveAnyMic(socket, socket.currentRoom);
-      const user = rooms[socket.currentRoom].users[socket.id];
-      if (user) {
-        // تعديل 3: نرسل id بس عشان الواجهة تحذفه
-        socket.to(socket.currentRoom).emit('user_left', socket.id);
-        delete rooms[socket.currentRoom].users[socket.id];
+      
+      if (room.users[socket.id]) {
+        io.to(socket.currentRoom).emit('sys_broadcast', { text: `❌ غادر ${room.users[socket.id].username} الشات.` });
+        io.to(socket.currentRoom).emit('user_left', socket.id);
+        delete room.users[socket.id];
+      }
+      
+      // حذف الغرف الفرعية إذا أصبحت فارغة تماماً لتوفير موارد السيرفر
+      if (Object.keys(room.users).length === 0 && socket.currentRoom !== 'الغرفة العامة') {
+        delete rooms[socket.currentRoom];
+        io.emit('update_rooms_list', Object.keys(rooms));
       }
     }
   });
 });
 
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`🔥 LUGANA DARK CHAT SERVER IS LIVE ON PORT: ${PORT}`);
 });
