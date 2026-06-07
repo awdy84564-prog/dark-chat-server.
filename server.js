@@ -1,14 +1,24 @@
+// ==================== server.js - الخانة 1 من 3 ====================
 const express = require('express');
 const app = express();
 const http = require('http');
 const server = http.createServer(app);
 const { Server } = require("socket.io");
-const io = new Server(server, { cors: { origin: "*" } });
+
+// السماح بالاتصالات الخارجية من جميع النطاقات (CORS) لتجنب مشاكل الحظر
+const io = new Server(server, { 
+  cors: { 
+    origin: "*",
+    methods: ["GET", "POST"]
+  } 
+});
 
 app.use(express.static(__dirname));
+
+// قراءة المنفذ ديناميكياً ليتوافق مع استضافة Render السحابية
 const PORT = process.env.PORT || 3000;
 
-// نظام رتب لقانا الكامل بالدرجات والألوان المحددة
+// نظام رتب لقانا الكامل بالدرجات والألوان المحددة للتوهج
 const ROLES = {
   'GUEST': { name: 'زائر', level: 0, color: '#ffffff' },
   'MEMBER': { name: 'عضو', level: 1, color: '#00ffcc' },
@@ -41,48 +51,55 @@ let rooms = {
 };
 
 let bannedIPs = new Set();
-let messageLogs = {}; // لجدار حماية الـ Spam
+let messageLogs = {}; // لجدار حماية الـ Spam لمنع إغراق الشات
+// ==================== server.js - الخانة 2 من 3 ====================
 
+// دالة لإنزال المستخدم تلقائياً من أي مايك في حال خروجه أو نزوله الاختياري
 function leaveAnyMic(socket, roomName) {
   const room = rooms[roomName];
   if (!room) return;
   const slotIndex = room.mics.findIndex(s => s.userId === socket.id);
   if (slotIndex !== -1) {
     const user = room.users[socket.id];
-    room.mics[slotIndex] = { userId: null, username: null, role: null, position: slotIndex < 4 ? "top" : "bottom", isLocked: room.mics[slotIndex].isLocked, isMuted: false };
+    room.mics[slotIndex] = { 
+      userId: null, 
+      username: null, 
+      role: null, 
+      position: slotIndex < 4 ? "top" : "bottom", 
+      isLocked: room.mics[slotIndex].isLocked, 
+      isMuted: false 
+    };
     io.to(roomName).emit('update_mics', room.mics);
     if (user) {
       io.to(roomName).emit('sys_broadcast', { text: `📉 نزل [${ROLES[user.role].name}] ${user.username} من المايك رقم ${slotIndex + 1}` });
-      io.to(roomName).emit('mic_stream_stopped', { broadcasterId: socket.id });
     }
   }
 }
-// ==================== الخانة الثانية: إدارة الاتصال وجدار الحماية ====================
 
+// بدء استقبال اتصالات الأجهزة والشبكات الحية
 io.on('connection', (socket) => {
-    const clientIP = socket.handshake.address;
+    // جلب معرف شبكة المستخدم (IP) للتحقق من جدار الحماية ضد المخربين
+    const clientIP = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address;
 
-    // 1. فحص جدار الحماية ضد الحظر الفوري (IP Ban)
     if (bannedIPs.has(clientIP)) {
-        socket.emit('banned', { reason: "تم حظر جهازك أو شبكتك نهائياً من دخول التطبيق بطلب من الإدارة." });
+        socket.emit('banned', { reason: "🚫 تم حظر جهازك أو شبكتك نهائياً من دخول التطبيق." });
         socket.disconnect(true);
         return;
     }
 
     let currentRoom = 'الغرفة العامة';
 
-    // 2. تسجيل دخول المستخدم والتحقق من كلمة مرور الرتبة المرتفعة
+    // التحقق من هوية المستخدم وكلمة مرور رتبته المخصصة عند الدخول
     socket.on('register_user', (data) => {
-        let assignedRole = 'GUEST'; // الافتراضي زائر بدون كلمة مرور
+        let assignedRole = 'GUEST'; // الافتراضي زائر بدون صلاحيات
         
-        // إذا حاول المستخدم إدخال كلمة مرور، يتم فحصها عبر جدار الحماية الصارم الخاص بك
+        // فحص جدار الحماية ضد كلمات المرور لتخصيص الرتبة تلقائياً
         if (data.password && PASSWORDS[data.password]) {
             assignedRole = PASSWORDS[data.password];
         } else if (data.password && !PASSWORDS[data.password]) {
-            socket.emit('auth_error', { text: "⚠️ كلمة مرور الرتبة غير صحيحة! تم تحويل رتبتك تلقائياً إلى زائر." });
+            socket.emit('auth_error', { text: "⚠️ كلمة مرور الرتبة غير صحيحة! تم تسجيل دخولك كـ زائر." });
         }
 
-        // إنشاء كائن بيانات المستخدم وتخزينه في الغرفة
         const userObj = {
             id: socket.id,
             username: data.username || `زائر_${Math.floor(1000 + Math.random() * 9000)}`,
@@ -93,7 +110,7 @@ io.on('connection', (socket) => {
         rooms[currentRoom].users[socket.id] = userObj;
         socket.join(currentRoom);
 
-        // إرسال تأكيد النجاح مع تلوين الخط والرتبة المحددة طبقاً للجدول
+        // إرسال تأكيد النجاح للواجهة مع تطبيق ألوان لقانا الرسمية المحددة للرتبة
         socket.emit('registration_success', {
             username: userObj.username,
             role: userObj.role,
@@ -102,10 +119,9 @@ io.on('connection', (socket) => {
             room: currentRoom
         });
 
-        // مزامنة حالة المايكات وقائمة الأسماء المتواجدة فوراً للمستخدم الجديد
+        // مزامنة فورية لحالة المايكات الـ 8 وقائمة الأسماء المتواجدة للمستخدم الجديد
         socket.emit('update_mics', rooms[currentRoom].mics);
         
-        // بث قائمة المتواجدين المحدثة لجميع من في الغرفة
         io.to(currentRoom).emit('update_users_list', Object.values(rooms[currentRoom].users).map(u => ({
             username: u.username,
             role: u.role,
@@ -113,31 +129,31 @@ io.on('connection', (socket) => {
             color: ROLES[u.role].color
         })));
 
-        // بث رسالة دخول مميزة داخل ساحة الشات العامة
+        // بث إعلان الدخول المميّز لجميع أعضاء الغرفة
         io.to(currentRoom).emit('sys_broadcast', {
             text: `📢 انضم [${ROLES[userObj.role].name}] ${userObj.username} إلى الدردشة الآن.`
         });
     });
 
-    // 3. معالجة الرسائل الفورية وفلتر الحماية ضد السبام والتكرار
+    // استقبال رسائل الشات العامة مع فلتر الحماية الصارم ضد السبام وإغراق الغرفة
     socket.on('send_chat_msg', (text) => {
         const room = rooms[currentRoom];
         if (!room) return;
         const user = room.users[socket.id];
         if (!user) return;
 
-        // جدار حماية حظر التكرار (Anti-Spam Filter) - يمنع إرسال أكثر من 3 رسائل في غضون 3 ثوانٍ
+        // نظام الـ Anti-Spam: يمنع إرسال أكثر من 3 رسائل في غضون 3 ثوانٍ فقط لتوفير استقرار السيرفر
         const now = Date.now();
         if (!messageLogs[socket.id]) messageLogs[socket.id] = [];
         messageLogs[socket.id] = messageLogs[socket.id].filter(t => now - t < 3000); 
         
         if (messageLogs[socket.id].length >= 3) {
-            socket.emit('sys_broadcast', { text: "⚠️ نظام الحماية: الرجاء عدم تكرار الرسائل بسرعة فائقة لمنع الحظر المؤقت!" });
+            socket.emit('sys_broadcast', { text: "⚠️ نظام الحماية: الرجاء عدم تكرار الرسائل بسرعة فائقة منعا للحظر المؤقت!" });
             return;
         }
         messageLogs[socket.id].push(now);
 
-        // بث الرسالة النهائية لجميع المستخدمين مع تلوين الرتبة
+        // إعادة بث الرسالة فورا لجميع الهواتف المتصلة لتظهر بالخط المخصص
         io.to(currentRoom).emit('receive_chat_msg', {
             username: user.username,
             text: text,
@@ -146,7 +162,7 @@ io.on('connection', (socket) => {
             color: ROLES[user.role].color
         });
     });
-    // ==================== الخانة الثالثة: التحكم بالمايكات ولوحة الإشراف ====================
+// ==================== server.js - الخانة 3 من 3 ====================
 
     // 4. معالجة الصعود والطلب على المايكات الـ 8 يدوياً أو تلقائياً
     socket.on('request_mic_slot', (slotIndex) => {
@@ -185,7 +201,6 @@ io.on('connection', (socket) => {
         // بث التحديث الفوري للمايكات وإعلان الصعود داخل الغرفة
         io.to(currentRoom).emit('update_mics', room.mics);
         io.to(currentRoom).emit('sys_broadcast', { text: `🎤 اعتلى [${ROLES[user.role].name}] ${user.username} المايك رقم ${slotIndex + 1}` });
-        socket.emit('mic_stream_ready', { slotIndex: slotIndex });
     });
 
     // 5. النزول الاختياري أو ترك المايك من قبل المستخدم
@@ -256,10 +271,10 @@ io.on('connection', (socket) => {
     });
 });
 
-// تشغيل سيرفر DARK CHAT الشامل والاستماع للاتصالات عبر البورت المعين
+// تشغيل سيرفر DARK VIP ROOT الاستماع للاتصالات عبر البورت المعين لـ Render
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`\n==============================================`);
-    console.log(`🔥 DARK CHAT COMPLETE BACKEND SERVER IS LIVE!`);
+    console.log(`🔥 DARK VIP ROOT BACKEND IS LIVE!`);
     console.log(`Running smoothly on port: ${PORT}`);
     console.log(`==============================================\n`);
 });
