@@ -143,3 +143,307 @@
   <div id="room-modal" class="modal">
     <div class="modal-content">
       <h3>إنشاء غرفة شات جديدة</h3>
+  <!-- شاشة الدخول الاحترافية والتأمين -->
+  <div id="login-screen">
+    <div class="login-box">
+      <h2>DARK CHAT</h2>
+      <input type="text" id="username" placeholder="ادخل الاسم المستعار..." required><br><br>
+      <input type="password" id="password" placeholder="كلمة مرور الرتبة (إن وجدت)..."><br><br>
+      <button class="send-btn" onclick="enterApplication()" style="width: 100%;">دخول غرف الدردشة</button>
+    </div>
+  </div>
+
+  <!-- شاشة التطبيق الرئيسية وغرف لقانا -->
+  <div id="app-screen">
+    <header>
+      <h3 id="room-header">غرفة الشات العامة</h3>
+      <div class="header-controls">
+        <button class="header-btn" onclick="openRoomModal()">➕ إنشاء غرفة</button>
+        <button class="header-btn" onclick="leaveMic()" style="background:#cc244c; border-color:#b01e40;">📉 نزول من المايك</button>
+      </div>
+    </header>
+
+    <!-- شريط تنقل الغرف النشطة حياً -->
+    <div class="rooms-bar" id="rooms-bar"></div>
+
+    <!-- مصفوفة الـ 8 مايكات (4 فوق و 4 تحت) -->
+    <div class="mics-grid-container">
+      <div class="mic-row" id="mic-row-top"></div>
+      <div class="mic-row" id="mic-row-bottom"></div>
+    </div>
+
+    <!-- المحادثة وقائمة المستخدمين الجانبية -->
+    <div class="main-body-container">
+      <div class="chat-area">
+        <ul id="messages-list"></ul>
+        <div class="input-area">
+          <div class="input-row">
+            <input type="text" id="msg-input" placeholder="اكتب رسالتك هنا يا كينج..." onkeypress="checkEnter(event)">
+            <button class="send-btn" onclick="sendMessage()">إرسال</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- قائمة الأعضاء الجانبية المتواجدين في الغرفة حالياً -->
+      <div class="users-sidebar">
+        <div class="sidebar-title">المتواجدون حالياً</div>
+        <div id="users-list-wrapper"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let socket;
+    let myData = {};
+    let selectedUserIdForAdmin = null;
+    let selectedSlotIdForAdmin = null;
+
+    let localStream = null;
+    let peerConnections = {};
+    const rtcConfig = { iceServers: [{ urls: 'stun:://google.com' }] };
+
+    const rowTop = document.getElementById('mic-row-top');
+    const rowBottom = document.getElementById('mic-row-bottom');
+
+    // بناء الواجهة للمايكات (4 فوق و4 تحت)
+    for(let i = 0; i < 8; i++) {
+        const targetRow = i < 4 ? rowTop : rowBottom;
+        targetRow.innerHTML += `
+            <div class="mic-slot" id="mic-slot-${i}" onclick="handleMicClick(${i})">
+                <div class="mic-avatar" id="mic-icon-${i}">
+                    🎙️
+                    <div class="mic-number">${i+1}</div>
+                </div>
+                <div class="mic-name" id="mic-name-${i}">فارغ ${i+1}</div>
+            </div>
+        `;
+    }
+
+    function enterApplication() {
+        const uname = document.getElementById('username').value.trim();
+        const pass = document.getElementById('password').value.trim();
+        if(!uname) { alert("الرجاء كتابة الاسم المستعار!"); return; }
+
+        socket = io();
+        setupSocketEvents();
+
+        socket.on('connect', () => {
+            socket.emit('join_room', { username: uname, password: pass, roomName: 'الغرفة العامة' });
+        });
+    }
+
+    function setupSocketEvents() {
+        socket.on('room_state', (state) => {
+            myData = state.myData;
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('app-screen').style.display = 'flex';
+            document.getElementById('room-header').innerText = `DARK CHAT - غرفتك: ${state.roomName}`;
+            
+            updateMicsUI(state.mics);
+            updateRoomsBar(state.allRooms, state.roomName);
+            updateUsersSidebar(state.users);
+            
+            document.getElementById('messages-list').innerHTML = '';
+            appendMessage(`✅ تم الانضمام بنجاح إلى [ ${state.roomName} ]`, true);
+        });
+
+        socket.on('update_mics', (mics) => { updateMicsUI(mics); });
+        socket.on('update_rooms_list', (allRooms) => { 
+            const currentRoom = document.getElementById('room-header').innerText.split('غرفتك: ')[1] || 'الغرفة العامة';
+            updateRoomsBar(allRooms, currentRoom); 
+        });
+        
+        socket.on('user_joined', (user) => { appendMessage(`📢 دخل [${user.username}] إلى الغرفة`, true); });
+        socket.on('user_left', (id) => { appendMessage(`❌ غادر أحد المستخدمين الغرفة`, true); });
+        socket.on('login_error', (msg) => { alert(msg); window.location.reload(); });
+        
+        socket.on('sys_broadcast', (data) => { appendMessage(data.text, true); });
+        socket.on('new_message', (data) => { appendMessage(data); });
+        socket.on('force_disconnect', (msg) => { alert(msg); window.location.reload(); });
+
+        socket.on('role_changed', (data) => { myData.role = data.newRole; });
+        // ================= بث الصوت الحي WebRTC Signaling =================
+        socket.on('mic_stream_started', async (data) => {
+            if (data.broadcasterId === socket.id) return;
+            const pc = new RTCPeerConnection(rtcConfig);
+            peerConnections[data.broadcasterId] = pc;
+
+            pc.onicecandidate = (e) => {
+                if (e.candidate) socket.emit('ice_candidate', { targetId: data.broadcasterId, candidate: e.candidate });
+            };
+
+            pc.ontrack = (e) => {
+                let audioEl = document.getElementById(`audio-${data.broadcasterId}`);
+                if (!audioEl) {
+                    audioEl = document.createElement('audio');
+                    audioEl.id = `audio-${data.broadcasterId}`;
+                    audioEl.autoplay = true;
+                    document.getElementById('audio-players-container').appendChild(audioEl);
+                }
+                audioEl.srcObject = e.streams;
+            };
+
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            socket.emit('audio_offer', { targetId: data.broadcasterId, sdp: pc.localDescription });
+        });
+
+        socket.on('audio_offer', async (data) => {
+            const pc = peerConnections[data.senderId] || new RTCPeerConnection(rtcConfig);
+            peerConnections[data.senderId] = pc;
+
+            if (localStream) localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
+            pc.onicecandidate = (e) => {
+                if (e.candidate) socket.emit('ice_candidate', { targetId: data.senderId, candidate: e.candidate });
+            };
+
+            await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            socket.emit('audio_answer', { targetId: data.senderId, sdp: pc.localDescription });
+        });
+
+        socket.on('audio_answer', async (data) => {
+            const pc = peerConnections[data.senderId];
+            if (pc) await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+        });
+
+        socket.on('ice_candidate', async (data) => {
+            const pc = peerConnections[data.senderId];
+            if (pc) await pc.addIceCandidate(new RTCIceCandidate(data.candidate)).catch(e => console.error(e));
+        });
+
+        socket.on('mic_stream_stopped', (data) => { closePeerConnection(data.broadcasterId); });
+    }
+
+    function updateMicsUI(mics) {
+        let amIOnMic = false;
+        mics.forEach((slot, index) => {
+            const iconEl = document.getElementById(`mic-icon-${index}`);
+            const nameEl = document.getElementById(`mic-name-${index}`);
+            if (slot.isLocked) {
+                iconEl.innerText = "🔒"; iconEl.className = "mic-avatar locked"; nameEl.innerText = `مغلق ${index + 1}`;
+            } else if (slot.userId) {
+                iconEl.innerText = "🗣️"; iconEl.className = "mic-avatar active"; nameEl.innerText = slot.username;
+                if (slot.userId === socket.id) amIOnMic = true;
+            } else {
+                iconEl.innerText = "🎙️"; iconEl.className = "mic-avatar"; nameEl.innerText = `فارغ ${index + 1}`;
+            }
+        });
+    }
+
+    function updateRoomsBar(allRooms, activeRoom) {
+        const bar = document.getElementById('rooms-bar');
+        bar.innerHTML = '';
+        allRooms.forEach(r => {
+            const activeClass = r === activeRoom ? 'active' : '';
+            bar.innerHTML += `<div class="room-btn ${activeClass}" onclick="switchRoom('${r}')">🚪 ${r}</div>`;
+        });
+    }
+
+    function updateUsersSidebar(users) {
+        const wrapper = document.getElementById('users-list-wrapper');
+        wrapper.innerHTML = '';
+        users.forEach(u => {
+            wrapper.innerHTML += `
+                <div class="sidebar-user-item glow-${u.role}" style="color:${u.color}" onclick="openAdminMenuDirect(event, '${u.id}')">
+                    👤 ${u.username}
+                </div>`;
+        });
+    }
+
+    function switchRoom(roomName) {
+        const pass = document.getElementById('password').value.trim();
+        leaveMic();
+        socket.emit('join_room', { username: myData.username, password: pass, roomName: roomName });
+    }
+
+    function appendMessage(data, isSys = false) {
+        const list = document.getElementById('messages-list');
+        const li = document.createElement('li');
+        if(isSys) {
+            li.className = 'msg msg-sys'; li.innerText = data;
+        } else {
+            li.className = 'msg';
+            li.innerHTML = `<strong class="username-clickable glow-${data.role}" style="color: ${data.color}" onclick="openAdminMenuDirect(event, '${data.id}')">[${data.roleName}] ${data.username}:</strong> <span>${data.text}</span>`;
+        }
+        list.appendChild(li);
+        list.scrollTop = list.scrollHeight;
+    }
+
+    function sendMessage() {
+        const input = document.getElementById('msg-input');
+        const text = input.value.trim();
+        if(!text || !socket) return;
+        socket.emit('send_message', text);
+        input.value = '';
+    }
+
+    function checkEnter(event) { if(event.key === 'Enter') sendMessage(); }
+
+    async function handleMicClick(slotId) {
+        if(!socket) return;
+        selectedSlotIdForAdmin = slotId;
+        try {
+            localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            socket.emit('request_mic', slotId);
+        } catch (err) {
+            alert("❌ يرجى منح صلاحية المايكروفون للجهاز للتمكن من البث!");
+        }
+    }
+
+    function leaveMic() {
+        if (socket) socket.emit('leave_mic');
+        if (localStream) { localStream.getTracks().forEach(track => track.stop()); localStream = null; }
+        Object.keys(peerConnections).forEach(key => closePeerConnection(key));
+    }
+
+    function closePeerConnection(id) {
+        if (peerConnections[id]) { peerConnections[id].close(); delete peerConnections[id]; }
+        const audioEl = document.getElementById(`audio-${id}`); if (audioEl) audioEl.remove();
+    }
+
+    function openAdminMenuDirect(event, targetId) {
+        event.preventDefault();
+        if(targetId === socket.id || !socket) return;
+        selectedUserIdForAdmin = targetId;
+        const menu = document.getElementById('admin-context-menu');
+        menu.style.display = 'flex'; menu.style.top = `${event.clientY}px`; menu.style.left = `${event.clientX}px`;
+    }
+
+    function closeAdminMenu() { document.getElementById('admin-context-menu').style.display = 'none'; }
+
+    function executeAdminAction(action) {
+        if (!socket) return;
+        if (action === 'lock_mic' && selectedSlotIdForAdmin !== null) {
+            socket.emit('admin_toggle_mic_lock', selectedSlotIdForAdmin);
+        } else if (selectedUserIdForAdmin) {
+            socket.emit('admin_action', { action: action, targetId: selectedUserIdForAdmin });
+        }
+        closeAdminMenu();
+    }
+
+    function openRoleModal() { document.getElementById('role-modal').style.display = 'flex'; closeAdminMenu(); }
+    function closeRoleModal() { document.getElementById('role-modal').style.display = 'none'; }
+    function confirmSetRole() {
+        const newRole = document.getElementById('role-select').value;
+        socket.emit('admin_action', { action: 'set_role', targetId: selectedUserIdForAdmin, newRole: newRole });
+        closeRoleModal();
+    }
+
+    function openRoomModal() { document.getElementById('room-modal').style.display = 'flex'; }
+    function closeRoomModal() { document.getElementById('room-modal').style.display = 'none'; }
+    function confirmCreateRoom() {
+        const rName = document.getElementById('new-room-name').value.trim();
+        if(rName) socket.emit('create_room', rName);
+        closeRoomModal();
+    }
+
+    document.addEventListener('click', function(e) {
+        const menu = document.getElementById('admin-context-menu');
+        if (!menu.contains(e.target) && e.target.className.indexOf('username-clickable') === -1 && e.target.className.indexOf('sidebar-user-item') === -1) closeAdminMenu();
+    });
+  </script>
+</body>
+</html>
