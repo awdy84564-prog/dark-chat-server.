@@ -1,24 +1,17 @@
 {
-  "name": "DARK VIP ROOT - لـقـانـا الـمـطـوّر",
-  "short_name": "DARK VIP ROOT",
-  "description": "دردشة غرف صوتية وكتابية مباشرة بصلاحيات ورتب كاملة مرفوعة على سيرفر مستقل",
-  "start_url": "/index.html",
-  "display": "standalone",
-  "background_color": "#0a0a0a",
-  "theme_color": "#ffd700",
-  "orientation": "portrait-primary",
+  "short_name": "DARK CHAT",
+  "name": "DARK CHAT ROOT",
   "icons": [
     {
       "src": "https://flaticon.com",
-      "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "https://flaticon.com",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     }
-  ]
+  ],
+  "start_url": "/index.html",
+  "background_color": "#0b0e14",
+  "theme_color": "#1f2c34",
+  "display": "standalone",
+  "orientation": "portrait"
 }
