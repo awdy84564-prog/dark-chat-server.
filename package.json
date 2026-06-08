@@ -1,7 +1,7 @@
 {
-  "name": "dark-vip-root",
+  "name": "dark-chat-root",
   "version": "1.0.0",
-  "description": "تطبيق DARK VIP ROOT - غرف دردشة صوتية وكتابية متكاملة بنظام لقانا",
+  "description": "تطبيق شات صوتي وكتابي متكامل - نظام الإدارة العليا ROOT",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -9,10 +9,5 @@
   "dependencies": {
     "express": "^4.19.2",
     "socket.io": "^4.7.5"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "author": "MUHAMMED OWNER",
-  "license": "ISC"
+  }
 }
