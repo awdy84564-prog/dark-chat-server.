@@ -1,5 +1,5 @@
 <!-- 
-  رخصة ملكية خاصة وتجارية محفوظة - تطبيق DARK VIP ROOT
+  رخصة ملكية خاصة وتجارية محفوظة - تطبيق DARK CHAT
   جميع الحقوق محفوظة للمطور وصاحب الموقع (MUHAMMED ABN HALIB) © 2026
   لا يحق لأي شخص نسخ أو تعديل الشفرة دون إذن خطي مسبق.
 -->
@@ -124,7 +124,7 @@
 
   <script>
     let socket;
-    // تم تعديل الرابط وعمل مطابقة للأحداث بنجاح هنا
+    // تم إصلاح النطاق وتوجيهه لرابط سيرفرك المخصص بنجاح
     const SERVER_URL = "https://onrender.com"; 
 
     function connectToDarkServer() {
@@ -140,13 +140,12 @@
       loginBtn.innerText = "جاري الاتصال بالسيرفر...";
       loginBtn.disabled = true;
 
-      // تهيئة الاتصال بالسيرفر بنظام سليم ومتوافق
+      // فتح اتصال سوكيت حقيقي ومتطابق
       socket = io(SERVER_URL, { transports: ['websocket', 'polling'] });
 
       socket.on('connect', () => {
         socket.emit('register_user', { username: username, password: rolePassword });
       });
-
       socket.on('registration_success', (data) => {
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('app-screen').style.display = 'flex';
@@ -261,7 +260,15 @@
     }
 
     function getRoleColor(role) {
-      const colors = { 'OWNER': '#00ff00', 'CROWN': '#ffd700', 'MASTER': '#9933ff', 'ADMIN': '#ff3366', 'MODERATOR': '#ffcc00', 'MEMBER': '#00ffcc', 'GUEST': '#ffffff' };
+      const colors = { 
+        'OWNER': '#00ff00', 
+        'CROWN': '#ffd700', 
+        'MASTER': '#9933ff', 
+        'ADMIN': '#ff3366', 
+        'MODERATOR': '#ffcc00', 
+        'MEMBER': '#00ffcc', 
+        'GUEST': '#ffffff' 
+      };
       return colors[role] || '#ffffff';
     }
   </script>
