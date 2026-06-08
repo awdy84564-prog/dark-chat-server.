@@ -11,7 +11,6 @@ const io = new Server(server, {
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// قواعد البيانات المؤقتة في ذاكرة السيرفر للغرف، المستخدمين، والعقوبات
 let users = {}; 
 let rooms = { "العامة": [], "سيرفر الساحل": [], "شباب دمشق": [] };
 let micSlots = { "العامة": [null, null, null], "سيرفر الساحل": [null, null, null], "شباب دمشق": [null, null, null] };
@@ -21,19 +20,32 @@ let mutedUsers = new Set();
 io.on('connection', (socket) => {
     let userIP = socket.handshake.address;
     
-    // فحص الحظر التلقائي عند الدخول (حظر IP)
     if (bannedIPs.has(userIP)) {
         socket.emit('banned', 'لقد تم حظرك نهائياً من هذا السيرفر من قبل الـ ROOT.');
         socket.disconnect();
         return;
     }
 
-    // 1. نظام تسجيل الدخول وتحديد الرتبة تلقائياً
-    socket.on('join_system', (username) => {
+    // نظام تسجيل الدخول الحقيقي مع التحقق من كلمة المرور للـ ROOT
+    socket.on('join_system', (data) => {
+        let username = data.username.trim();
+        let password = data.password ? data.password.trim() : "";
         let rank = "عضو عادي";
-        // التحقق الأمني من المالك الحقيقي للتطبيق
-        if (username.trim() === "MUHAMMED") {
-            rank = "VIP ROOT";
+
+        // التحقق الأمني الصارم من هوية صاحب الموقع التلقائية
+        if (username === "MUHAMMED") {
+            if (password !== "muhammed0940539") {
+                // إذا حاول شخص الدخول باسمك وبكلمة مرور خاطئة يتم رفضه فوراً
+                socket.emit('login_failed', 'خطأ أمني: كلمة المرور الخاصة بالـ VIP ROOT غير صحيحة!');
+                return;
+            }
+            rank = "VIP ROOT"; // منحك أعلى رتبة في النظام بعد نجاح التحقق
+        } else {
+            // منع الأعضاء العاديين من استخدام اسمك المحمي
+            if (username.toUpperCase() === "MUHAMMED") {
+                socket.emit('login_failed', 'هذا الاسم محمي ومخصص لصاحب الموقع فقط!');
+                return;
+            }
         }
         
         users[socket.id] = { username, rank, currentRoom: "العامة", ip: userIP };
@@ -45,17 +57,14 @@ io.on('connection', (socket) => {
         io.to("العامة").emit('update_mics', micSlots["العامة"]);
     });
 
-    // 2. نظام الانتقال بين الغرف المستقلة
     socket.on('switch_room', (newRoom) => {
         const user = users[socket.id];
         if (!user) return;
 
-        // مغادرة الغرفة السابقة
         socket.leave(user.currentRoom);
         rooms[user.currentRoom] = rooms[user.currentRoom].filter(u => u !== user.username);
         io.to(user.currentRoom).emit('update_users', rooms[user.currentRoom]);
 
-        // دخول الغرفة الجديدة
         user.currentRoom = newRoom;
         socket.join(newRoom);
         if(!rooms[newRoom]) rooms[newRoom] = [];
@@ -65,7 +74,6 @@ io.on('connection', (socket) => {
         io.to(newRoom).emit('update_mics', micSlots[newRoom] || [null, null, null]);
     });
 
-    // 3. معالجة الرسائل العامة والخاصة وحظر الكتم
     socket.on('send_message', (data) => {
         const user = users[socket.id];
         if (!user || mutedUsers.has(user.username)) {
@@ -73,14 +81,12 @@ io.on('connection', (socket) => {
         }
 
         if (data.isPrivate) {
-            // نظام الدردشة الخاصة الحقيقي (البحث عن معرف المستلم عن طريق الاسم)
             const targetSocketId = Object.keys(users).find(id => users[id].username === data.target);
             if (targetSocketId) {
                 io.to(targetSocketId).emit('receive_private', { from: user.username, msg: data.msg });
                 socket.emit('receive_private', { from: `[إلى ${data.target}]`, msg: data.msg });
             }
         } else {
-            // إرسال رسالة عامة للغرفة المستقلة فقط
             io.to(user.currentRoom).emit('receive_message', {
                 username: user.username,
                 rank: user.rank,
@@ -89,7 +95,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // 4. نظام إدارة المايك الصوتي المباشر وحجزه
     socket.on('request_mic', (slotIndex) => {
         const user = users[socket.id];
         if (!user || mutedUsers.has(user.username)) return;
@@ -113,10 +118,9 @@ io.on('connection', (socket) => {
         }
     });
 
-    // 5. أوامر التحكم الصارمة الخاصة بالـ VIP ROOT (MUHAMMED) فقط
     socket.on('admin_command', (data) => {
         const adminUser = users[socket.id];
-        if (!adminUser || adminUser.rank !== "VIP ROOT") return; // حماية مطلقة
+        if (!adminUser || adminUser.rank !== "VIP ROOT") return; 
 
         const targetSocketId = Object.keys(users).find(id => users[id].username === data.target);
 
@@ -136,7 +140,7 @@ io.on('connection', (socket) => {
                 io.to(targetSocketId).emit('banned', 'تم حظرك نهائياً.');
                 io.sockets.sockets.get(targetSocketId).disconnect();
             } else {
-                mutedUsers.add(data.target); // احتياطاً إذا خرج
+                mutedUsers.add(data.target); 
             }
             io.emit('sys_alert', `🚫 تم حظر العضو [ ${data.target} ] وآي بي جهازه نهائياً.`);
         } else if (data.action === 'create_room') {
@@ -146,7 +150,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // معالجة انقطاع الاتصال المفاجئ وتنظيف السيرفر
     socket.on('disconnect', () => {
         const user = users[socket.id];
         if (user) {
