@@ -1,276 +1,210 @@
-<!-- 
-  رخصة ملكية خاصة وتجارية محفوظة - تطبيق DARK CHAT
-  جميع الحقوق محفوظة للمطور وصاحب الموقع (MUHAMMED ABN HALIB) © 2026
-  لا يحق لأي شخص نسخ أو تعديل الشفرة دون إذن خطي مسبق.
--->
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DARK VIP ROOT - غرف دردشة صوتية</title>
-  <link rel="manifest" href="/manifest.json">
-  <!-- استدعاء مكتبة Socket.io الرسمية والمستقرة للتواصل مع السيرفر -->
-  <script src="https://socket.io"></script>
-  <style>
-    :root { 
-      --bg-main: #0a0a0a; 
-      --bg-card: #141414; 
-      --bg-input: #202020; 
-      --text-color: #f0f0f0; 
-      --accent: #ffd700; 
-      --active-green: #00ffcc;
-    }
-    body { 
-      background-color: var(--bg-main); 
-      color: var(--text-color); 
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-      margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; 
-      overflow: hidden;
-    }
-    #login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; padding: 20px; box-sizing: border-box; }
-    .login-box { background: var(--bg-card); padding: 30px; border-radius: 16px; width: 100%; max-width: 380px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); border: 1px solid #252525; text-align: center; }
-    .login-box h2 { color: var(--accent); margin-bottom: 25px; font-size: 24px; letter-spacing: 1px; }
-    #app-screen { display: none; flex-direction: column; height: 100vh; }
-    header { 
-      background: var(--bg-card); padding: 12px 15px; text-align: center; 
-      border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; 
-    }
-    header h3 { margin: 0; font-size: 16px; color: var(--accent); font-weight: 600; }
-    .header-controls { display: flex; gap: 8px; }
-    .header-btn { background: #282828; padding: 8px 14px; border-radius: 8px; font-size: 12px; cursor: pointer; border: 1px solid #3a3a3a; color: white; transition: 0.2s; }
-    .header-btn:hover { background: #383838; border-color: #555; }
-    
-    .rooms-bar { background: #080808; padding: 10px; border-bottom: 1px solid #1a1a1a; display: flex; gap: 8px; overflow-x: auto; white-space: nowrap; }
-    .room-btn { background: #1c1c1c; padding: 6px 14px; border-radius: 20px; font-size: 12px; cursor: pointer; border: 1px solid #2a2a2a; display: inline-block; transition: 0.2s; color: white;}
-    .room-btn.active { background: var(--accent); color: #000; font-weight: bold; border-color: var(--accent); }
-    
-    .mics-grid-container { background: #101010; padding: 12px; border-bottom: 1px solid #222; display: flex; flex-direction: column; gap: 12px; }
-    .mic-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; justify-items: center; }
-    .mic-slot { display: flex; flex-direction: column; align-items: center; width: 100%; cursor: pointer; background: rgba(255,255,255,0.01); padding: 8px 0; border-radius: 10px; border: 1px solid #1a1a1a; transition: 0.2s; }
-    .mic-slot:hover { background: rgba(255,255,255,0.03); border-color: #333; }
-    .mic-avatar { width: 46px; height: 46px; background: var(--bg-input); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #444; font-size: 20px; position: relative; transition: 0.3s; color: #fff;}
-    .mic-avatar.active { border-color: var(--active-green); box-shadow: 0 0 10px var(--active-green); }
-    .mic-number { position: absolute; bottom: -4px; right: -4px; background: #000; color: #fff; font-size: 9px; width: 15px; height: 15px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid #444; }
-    .mic-name { font-size: 11px; margin-top: 6px; color: #bbb; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; width: 85%; text-align: center; }
-    
-    .main-body-container { flex-grow: 1; display: flex; overflow: hidden; position: relative; }
-    .chat-area { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; background: #0c0c0c; }
-    #messages-list { flex-grow: 1; padding: 15px; overflow-y: auto; list-style: none; margin: 0; }
-    .msg { margin-bottom: 8px; line-height: 1.6; font-size: 14px; word-break: break-word; color: #fff; }
-    .msg-sys { color: #888; font-size: 12px; text-align: center; background: rgba(255,255,255,0.03); padding: 6px; border-radius: 6px; margin: 8px auto; max-width: 85%; border: 1px solid #1f1f1f; }
-    
-    .users-sidebar { width: 140px; background: var(--bg-card); border-right: 1px solid #222; display: flex; flex-direction: column; overflow-y: auto; padding: 10px; box-sizing: border-box; }
-    .sidebar-title { font-size: 12px; color: #666; margin-bottom: 8px; padding-bottom: 5px; border-bottom: 1px solid #222; font-weight: bold; text-align: center; }
-    .sidebar-user-item { padding: 6px; font-size: 12px; border-bottom: 1px solid #1a1a1a; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    
-    .input-area { background: var(--bg-card); padding: 12px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #222; }
-    .input-row { display: flex; gap: 8px; }
-    input[type="text"], input[type="password"] { background: var(--bg-input); border: 1px solid #2a2a2a; color: #fff; padding: 12px; border-radius: 8px; font-size: 14px; width: 100%; box-sizing: border-box; }
-    input[type="text"]:focus, input[type="password"]:focus { border-color: var(--accent); outline: none; }
-    button.send-btn { background: var(--accent); color: #000; border: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; }
-    button.send-btn:hover { background: #e5c100; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DARK CHAT ROOT</title>
+    <style>
+        body { margin: 0; padding: 0; background-color: #0b0e14; color: #e9edef; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        header { background-color: #1f2c34; padding: 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2a3942; }
+        .logo { font-size: 18px; font-weight: bold; color: #ff3333; }
+        .main-container { flex: 1; display: flex; height: calc(100vh - 60px); }
+        .sidebar { width: 220px; background: #111b21; border-left: 1px solid #2a3942; display: flex; flex-direction: column; padding: 10px; }
+        .chat-area { flex: 1; display: flex; flex-direction: column; background: #0b0e14; }
+        
+        .mic-bar { background: #182229; padding: 10px; display: flex; gap: 15px; border-bottom: 1px solid #2a3942; }
+        .mic-box { text-align: center; font-size: 12px; background: #202c33; padding: 5px; border-radius: 6px; min-width: 60px; cursor: pointer; border: 1px dashed #8696a0; }
+        .mic-taken { border: 1px solid #00a884; color: #00a884; font-weight: bold; }
+        
+        #messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        .msg { padding: 8px 12px; border-radius: 8px; max-width: 80%; font-size: 14px; }
+        .msg.me { background: #005c4b; align-self: flex-start; }
+        .msg.other { background: #202c33; align-self: flex-end; }
+        .msg.pvt { background: #511f54; border: 1px solid #a238a6; }
+        .msg.sys { background: #3a1d1d; color: #ff6666; align-self: center; text-align: center; width: 90%; }
+        
+        .input-bar { background: #1f2c34; padding: 10px; display: flex; gap: 8px; }
+        input { flex: 1; background: #2a3942; border: none; padding: 12px; border-radius: 20px; color: white; outline: none; }
+        button { background: #00a884; border: none; padding: 10px 18px; color: white; border-radius: 20px; font-weight: bold; cursor: pointer; }
+        
+        .room-btn { padding: 8px; background: #1f2c34; margin: 4px 0; border-radius: 4px; text-align: center; cursor: pointer; font-size: 14px; }
+        .admin-box { background: #291212; padding: 10px; border-radius: 6px; margin-top: auto; border: 1px solid #ff3333; display: none; }
+        .admin-box input, .admin-box button { width: 100%; margin: 3px 0; font-size: 12px; padding: 6px; border-radius: 4px; }
+        
+        /* واجهة الدخول المحمية بكلمة مرور */
+        #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0b0e14; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10000; }
+        .login-card { background: #111b21; padding: 25px; border-radius: 12px; border: 1px solid #2a3942; display: flex; flex-direction: column; width: 85%; max-width: 320px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+    </style>
+    <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
 
-  <!-- شاشة الدخول -->
-  <div id="login-screen">
-    <div class="login-box">
-      <h2>DARK VIP ROOT ✨</h2>
-      <input type="text" id="username" placeholder="ادخل اسمك المستعار المميّز..." required><br><br>
-      <input type="password" id="role-password" placeholder="كلمة مرور الرتبة المخصصة (اختياري)..."><br><br>
-      <button id="login-btn" class="send-btn" style="width: 100%;" onclick="connectToDarkServer()">دخول غرف الدردشة</button>
+    <!-- شاشة قفل الدخول السري المحدثة بكلمة المرور -->
+    <div id="loginOverlay">
+        <div class="login-card">
+            <h2 style="color: #ff3333; text-align: center; margin-top: 0;">DARK CHAT ROOT</h2>
+            <p style="font-size: 12px; color: #8696a0; text-align: center; margin-bottom: 20px;">سجل دخولك لبدء المحادثة الفورية</p>
+            
+            <input type="text" id="nicknameInput" placeholder="أدخل اسمك المستعار..." style="margin-bottom: 12px; text-align: center;">
+            <input type="password" id="passwordInput" placeholder="كلمة المرور (للمسؤولين فقط)" style="margin-bottom: 20px; text-align: center;">
+            
+            <button onclick="startApp()">دخول السيرفر فوراً ⚡</button>
+        </div>
     </div>
-  </div>
 
-  <!-- الشاشة الرئيسية -->
-  <div id="app-screen">
     <header>
-      <h3 id="app-title">تطبيق DARK VIP ROOT</h3>
-      <div class="header-controls">
-        <button class="header-btn" onclick="leaveMic()">📉 نزول من المايك</button>
-        <button class="header-btn" style="background:#cc244c" onclick="location.reload()">خروج</button>
-      </div>
+        <div class="logo">DARK CHAT ROOT 🔒</div>
+        <div id="myStatus" style="font-size: 13px; color: #8696a0;">جاري الاتصال...</div>
     </header>
 
-    <div class="rooms-bar">
-      <div class="room-btn active">الغرفة العامة</div>
+    <div class="main-container">
+        <div class="sidebar">
+            <h4 style="margin: 5px 0; color: #00a884;">📁 الغرف المستقلة</h4>
+            <div id="roomsContainer"></div>
+            
+            <div class="admin-box" id="adminPanel">
+                <p style="color: #ff3333; margin: 0 0 5px 0; font-weight: bold; font-size:12px;">🛠️ لوحة تحكم الـ ROOT</p>
+                <input type="text" id="adminTarget" placeholder="اسم المستخدم المستهدف">
+                <button onclick="sendAdminCmd('mute')" style="background: #e0a905;">كتم عضو</button>
+                <button onclick="sendAdminCmd('unmute')" style="background: #00a884;">فك كتم</button>
+                <button onclick="sendAdminCmd('kick')" style="background: #dd4b39;">طرد مؤقت</button>
+                <button onclick="sendAdminCmd('ban')" style="background: #ff0000;">حظر IP قطعي</button>
+                <hr style="border: 0.5px solid #ff3333; margin: 8px 0;">
+                <input type="text" id="newRoomName" placeholder="اسم غرفة جديدة">
+                <button onclick="sendAdminCmd('create_room')" style="background: #4a148c;">إنشاء غرفة</button>
+            </div>
+        </div>
+
+        <div class="chat-area">
+            <div class="mic-bar">
+                <div class="mic-box" id="mic0" onclick="claimMic(0)">🎙️ 1: فارغ</div>
+                <div class="mic-box" id="mic1" onclick="claimMic(1)">🎙️ 2: فارغ</div>
+                <div class="mic-box" id="mic2" onclick="claimMic(2)">🎙️ 3: فارغ</div>
+                <button onclick="releaseMic()" style="padding:5px 10px; font-size:11px; background:#555;">ترك المايك</button>
+            </div>
+
+            <div id="messages"></div>
+
+            <div class="input-bar">
+                <input type="text" id="msgInput" placeholder="اكتب رسالة عامة.. (أو اكتب 'اسم العضو: رسالتك' لإرسال خاص)">
+                <button onclick="send()">إرسال ◀</button>
+            </div>
+        </div>
     </div>
 
-    <!-- شبكة المايكات الثمانية -->
-    <div class="mics-grid-container">
-      <div class="mic-row" id="top-mics"></div>
-      <div class="mic-row" id="bottom-mics"></div>
-    </div>
+    <script>
+        const socket = io();
+        let myName = "";
+        let myRank = "";
 
-    <div class="main-body-container">
-      <div class="chat-area">
-         <ul id="messages-list"></ul>
-         <div class="input-area">
-           <div class="input-row">
-             <input type="text" id="chat-input" placeholder="اكتب رسالتك هنا..." onkeypress="checkEnter(event)">
-             <button class="send-btn" onclick="sendTextMessage()">إرسال</button>
-           </div>
-         </div>
-      </div>
-      
-      <div class="users-sidebar">
-        <div class="sidebar-title">المتواجدون</div>
-        <div id="users-list-container"></div>
-      </div>
-    </div>
-  </div>
+        function startApp() {
+            const name = document.getElementById('nicknameInput').value.trim();
+            const pass = document.getElementById('passwordInput').value.trim();
+            if(!name) return alert("الرجاء كتابة الاسم المستعار!");
+            
+            myName = name;
+            // إرسال الاسم وكلمة المرور للسيرفر معاً للفحص والتحقق الصارم
+            socket.emit('join_system', { username: name, password: pass });
+        }
 
-  <script>
-    let socket;
-    // تم إصلاح النطاق وتوجيهه لرابط سيرفرك المخصص بنجاح
-    const SERVER_URL = "https://onrender.com"; 
-
-    function connectToDarkServer() {
-      const username = document.getElementById('username').value.trim();
-      const rolePassword = document.getElementById('role-password').value.trim();
-      const loginBtn = document.getElementById('login-btn');
-
-      if (!username) {
-        alert("من فضلك أدخل الاسم المستعار أولاً!");
-        return;
-      }
-
-      loginBtn.innerText = "جاري الاتصال بالسيرفر...";
-      loginBtn.disabled = true;
-
-      // فتح اتصال سوكيت حقيقي ومتطابق
-      socket = io(SERVER_URL, { transports: ['websocket', 'polling'] });
-
-      socket.on('connect', () => {
-        socket.emit('register_user', { username: username, password: rolePassword });
-      });
-      socket.on('registration_success', (data) => {
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('app-screen').style.display = 'flex';
-        document.getElementById('app-title').innerText = `DARK VIP ROOT - [${data.roleName}] ${data.username}`;
-      });
-
-      socket.on('auth_error', (data) => {
-        alert(data.text);
-        resetLoginBtn();
-      });
-
-      socket.on('banned', (data) => {
-        alert(data.reason);
-        resetLoginBtn();
-        socket.disconnect();
-      });
-
-      socket.on('update_users_list', (usersArray) => {
-        const container = document.getElementById('users-list-container');
-        container.innerHTML = '';
-        usersArray.forEach(u => {
-          const item = document.createElement('div');
-          item.className = 'sidebar-user-item';
-          item.style.color = u.color;
-          item.innerText = `[${u.roleName}] ${u.username}`;
-          container.appendChild(item);
+        socket.on('init_login', (data) => {
+            myRank = data.rank;
+            document.getElementById('myStatus').innerText = `${data.username} [${data.rank}]`;
+            
+            if(data.rank === "VIP ROOT") {
+                document.getElementById('adminPanel').style.display = "block";
+            }
+            document.getElementById('loginOverlay').style.display = "none";
+            updateRoomsList(data.roomsList);
         });
-      });
 
-      socket.on('update_mics', (micsArray) => {
-        const topRow = document.getElementById('top-mics');
-        const bottomRow = document.getElementById('bottom-mics');
-        topRow.innerHTML = '';
-        bottomRow.innerHTML = '';
-
-        micsArray.forEach((mic, index) => {
-          const slot = document.createElement('div');
-          slot.className = 'mic-slot';
-          slot.setAttribute('onclick', `requestMic(${index})`);
-
-          const avatar = document.createElement('div');
-          avatar.className = mic.userId ? 'mic-avatar active' : 'mic-avatar';
-          avatar.style.borderColor = mic.role ? getRoleColor(mic.role) : '#444';
-          avatar.innerText = mic.username ? mic.username.charAt(0).toUpperCase() : '🎙️';
-
-          const num = document.createElement('span');
-          num.className = 'mic-number';
-          num.innerText = index + 1;
-          avatar.appendChild(num);
-
-          const name = document.createElement('div');
-          name.className = 'mic-name';
-          name.innerText = mic.username ? mic.username : 'فارغ';
-
-          slot.appendChild(avatar);
-          slot.appendChild(name);
-
-          if (index < 4) topRow.appendChild(slot);
-          else bottomRow.appendChild(slot);
+        socket.on('login_failed', (errorMsg) => {
+            alert(errorMsg);
         });
-      });
 
-      socket.on('sys_broadcast', (data) => {
-        const list = document.getElementById('messages-list');
-        const li = document.createElement('li');
-        li.className = 'msg-sys';
-        li.innerText = data.text;
-        list.appendChild(li);
-        list.scrollTop = list.scrollHeight;
-      });
+        function send() {
+            const input = document.getElementById('msgInput');
+            const val = input.value.trim();
+            if(!val) return;
 
-      socket.on('receive_chat_msg', (data) => {
-        const list = document.getElementById('messages-list');
-        const li = document.createElement('li');
-        li.className = 'msg';
-        li.innerHTML = `<span style="color:${data.color}; font-weight:bold;">[${data.roleName}] ${data.username}:</span> ${data.text}`;
-        list.appendChild(li);
-        list.scrollTop = list.scrollHeight;
-      });
+            if(val.includes(':')) {
+                const parts = val.split(':');
+                const targetUser = parts[0].trim();
+                const secretMsg = parts.slice(1).join(':').trim();
+                socket.emit('send_message', { isPrivate: true, target: targetUser, msg: secretMsg });
+            } else {
+                socket.emit('send_message', { isPrivate: false, msg: val });
+            }
+            input.value = "";
+        }
 
-      socket.on('connect_error', () => {
-        alert("تنبيه: السيرفر يستغرق وقتاً للاستيقاظ على خطة Render. يرجى الانتظار ثوانٍ...");
-        resetLoginBtn();
-      });
-    }
+        socket.on('receive_message', (data) => {
+            const container = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = `msg ${data.username === myName ? 'me' : 'other'}`;
+            div.innerHTML = `<strong>[${data.rank}] ${data.username}:</strong> ${data.msg}`;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        });
 
-    function resetLoginBtn() {
-      const loginBtn = document.getElementById('login-btn');
-      loginBtn.innerText = "دخول غرف الدردشة";
-      loginBtn.disabled = false;
-    }
+        socket.on('receive_private', (data) => {
+            const container = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = "msg pvt";
+            div.innerHTML = `🔐 <strong>[دردشة خاصة سرية] ${data.from}:</strong> ${data.msg}`;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        });
 
-    function sendTextMessage() {
-      const input = document.getElementById('chat-input');
-      const text = input.value.trim();
-      if (text && socket) {
-        socket.emit('send_chat_msg', text);
-        input.value = '';
-      }
-    }
+        socket.on('sys_alert', (msg) => {
+            const container = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = "msg sys";
+            div.innerText = msg;
+            container.appendChild(div);
+        });
 
-    function checkEnter(e) {
-      if (e.key === 'Enter') sendTextMessage();
-    }
+        socket.on('sys_error', (msg) => { alert(msg); });
+        socket.on('banned', (msg) => { alert(msg); window.location.reload(); });
+        socket.on('kicked_out', (msg) => { alert(msg); socket.emit('switch_room', 'العامة'); });
 
-    function requestMic(index) {
-      if (socket) socket.emit('request_mic_slot', index);
-    }
+        function claimMic(index) { socket.emit('request_mic', index); }
+        function releaseMic() { socket.emit('leave_mic'); }
+        
+        socket.on('update_mics', (mics) => {
+            for(let i=0; i<3; i++) {
+                const el = document.getElementById(`mic${i}`);
+                if(mics[i]) {
+                    el.innerText = `🎙️ ${i+1}: ${mics[i]}`;
+                    el.classList.add('mic-taken');
+                } else {
+                    el.innerText = `🎙️ ${i+1}: فارغ`;
+                    el.classList.remove('mic-taken');
+                }
+            }
+        });
 
-    function leaveMic() {
-      if (socket) socket.emit('leave_mic');
-    }
+        function updateRoomsList(list) {
+            const container = document.getElementById('roomsContainer');
+            container.innerHTML = "";
+            list.forEach(room => {
+                const div = document.createElement('div');
+                div.className = "room-btn";
+                div.innerText = `💬 ${room}`;
+                div.onclick = () => socket.emit('switch_room', room);
+                container.appendChild(div);
+            });
+        }
+        socket.on('update_room_list', (list) => updateRoomsList(list));
 
-    function getRoleColor(role) {
-      const colors = { 
-        'OWNER': '#00ff00', 
-        'CROWN': '#ffd700', 
-        'MASTER': '#9933ff', 
-        'ADMIN': '#ff3366', 
-        'MODERATOR': '#ffcc00', 
-        'MEMBER': '#00ffcc', 
-        'GUEST': '#ffffff' 
-      };
-      return colors[role] || '#ffffff';
-    }
-  </script>
+        // تنفيذ أوامر الإدارة العليا للـ ROOT
+        function sendAdminCmd(action) {
+            const target = document.getElementById('adminTarget').value.trim();
+            const roomName = document.getElementById('newRoomName').value.trim();
+            socket.emit('admin_command', { action, target, roomName });
+            document.getElementById('adminTarget').value = "";
+            document.getElementById('newRoomName').value = "";
+        }
+    </script>
 </body>
 </html>
