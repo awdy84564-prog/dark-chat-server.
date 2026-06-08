@@ -1,14 +1,23 @@
+/* 
+  رخصة ملكية خاصة وتجارية محفوظة - تطبيق DARK CHAT
+  جميع الحقوق محفوظة للمطور وصاحب الموقع (MUHAMMED ABN HALIB) © 2026
+  لا يحق لأي شخص أو جهة نسخ، أو تعديل، أو إعادة توزيع شفرة هذا التطبيق دون إذن خطي مسبق.
+*/
+
 const express = require('express');
 const app = express();
 const http = require('http');
 const server = http.createServer(app);
 const { Server } = require("socket.io");
 
+// إعداد السوكيت مع السماح بالاتصالات الخارجية المشفرة بدون حظر (CORS)
 const io = new Server(server, { 
   cors: { 
     origin: "*",
-    methods: ["GET", "POST"]
-  } 
+    methods: ["GET", "POST"],
+    credentials: true
+  },
+  allowEIO3: true
 });
 
 app.use(express.static(__dirname));
@@ -63,6 +72,7 @@ function leaveAnyMic(socket, roomName) {
     }
   }
 }
+
 io.on('connection', (socket) => {
     const clientIP = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address;
 
@@ -80,6 +90,7 @@ io.on('connection', (socket) => {
             assignedRole = PASSWORDS[data.password];
         } else if (data.password && !PASSWORDS[data.password]) {
             socket.emit('auth_error', { text: "⚠️ كلمة مرور الرتبة غير صحيحة!" });
+            return;
         }
 
         const userObj = { id: socket.id, username: data.username || `زائر`, role: assignedRole, ip: clientIP };
@@ -188,6 +199,7 @@ io.on('connection', (socket) => {
     });
 });
 
-server.listen(PORT, '0.0.0.0', () => {
+// تم إصلاح منفذ الاستماع ليكون متوافقاً تلقائياً مع خوادم Render المشفرة
+server.listen(PORT, () => {
     console.log(`🔥 SERVER RUNNING ON PORT: ${PORT}`);
 });
