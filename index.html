@@ -4,13 +4,77 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>شاتنا محبتنا - غرفة الصوت والدردشة</title>
-    <!-- ربط ملف التصميم الخارجي -->
-    <link rel="stylesheet" href="style.css">
+    
+    <!-- 2️⃣ قسم التنسيق والألوان (CSS) مدمج هنا -->
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f6fa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .chat-container {
+            width: 900px;
+            height: 600px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .chat-header {
+            background: linear-gradient(135deg, #ff7675, #d63031);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid #b2bec3;
+        }
+        .chat-header h2 { margin: 0; font-size: 1.6rem; }
+        .btn-mic {
+            background-color: #ffeaa7;
+            border: none;
+            padding: 10px 15px;
+            font-weight: bold;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .btn-mic.active { background-color: #2ecc71; color: white; animation: pulse 1s infinite; }
+        .mic-status { margin-right: 10px; font-size: 0.9rem; font-style: italic; }
+        .chat-main { display: flex; flex: 1; overflow: hidden; }
+        .messages-area { flex: 3; padding: 20px; overflow-y: auto; background: #fafafa; }
+        .users-sidebar { flex: 1; background: #2d3436; color: white; padding: 15px; border-right: 2px solid #dfe6e9; }
+        .users-sidebar h3 { margin-top: 0; border-bottom: 1px solid #636e72; padding-bottom: 5px; }
+        .users-list { list-style: none; padding: 0; }
+        .users-list li { padding: 8px 0; display: flex; align-items: center; justify-content: space-between; }
+        .badge { padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; color: white; margin-left: 5px; }
+        .badge.admin { background-color: #d63031; }
+        .badge.VIP { background-color: #fdcb6e; color: #2d3436; }
+        .badge.member { background-color: #0984e3; }
+        .online-dot { width: 10px; height: 10px; background-color: #2ecc71; border-radius: 50%; }
+        .msg { margin-bottom: 15px; font-size: 1rem; line-height: 1.4; }
+        .msg.system { color: #7f8c8d; text-align: center; font-style: italic; font-size: 0.9rem; }
+        .chat-footer { padding: 15px; background: #f1f2f6; display: flex; gap: 10px; }
+        .chat-footer input { flex: 1; padding: 12px; border: 1px solid #ced6e0; border-radius: 8px; font-size: 1rem; outline: none; }
+        .btn-send { background: #d63031; color: white; border: none; padding: 0 25px; border-radius: 8px; font-size: 1rem; cursor: pointer; }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
 </head>
 <body>
 
+    <!-- 1️⃣ قسم الهيكل (HTML) مدمج هنا -->
     <div class="chat-container">
-        <!-- الهيدر العلوي وفيه نظام المايك الحي -->
         <header class="chat-header">
             <h2>💖 شاتنا محبتنا 💖</h2>
             <div class="mic-section">
@@ -20,14 +84,12 @@
         </header>
 
         <div class="chat-main">
-            <!-- ساحة الرسائل والدردشة -->
             <section class="messages-area" id="messagesArea">
                 <div class="msg system">مرحباً بك في شاتنا محبتنا! التزم بالقوانين.</div>
                 <div class="msg"><span class="badge admin">المدير</span> <strong>أحمد:</strong> منورين الغرفة جميعاً!</div>
                 <div class="msg"><span class="badge VIP">VIP</span> <strong>سارة:</strong> مساء الخير والأناقة 🌸</div>
             </section>
 
-            <!-- القائمة الجانبية للمتواجدين والرتب -->
             <aside class="users-sidebar">
                 <h3>المتواجدون (<span id="userCount">3</span>)</h3>
                 <ul class="users-list">
@@ -38,14 +100,61 @@
             </aside>
         </div>
 
-        <!-- شريط إرسال الرسائل السفلي -->
         <footer class="chat-footer">
             <input type="text" id="msgInput" placeholder="اكتب رسالتك المحببة هنا..." autocomplete="off">
             <button id="sendBtn" class="btn-send">إرسال 🚀</button>
         </footer>
     </div>
 
-    <!-- ربط ملف البرمجة الخارجي -->
-    <script src="script.js"></script>
+    <!-- 3️⃣ قسم البرمجة والمنطق (JavaScript) مدمج هنا -->
+    <script>
+        const msgInput = document.getElementById('msgInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const messagesArea = document.getElementById('messagesArea');
+        const micBtn = document.getElementById('micBtn');
+        const micStatus = document.getElementById('micStatus');
+
+        let currentUserRole = "admin"; // يمكنك تغييرها تجريبياً إلى: 'admin' أو 'VIP' أو 'member'
+        let isMicOn = false;
+
+        function sendMessage() {
+            const text = msgInput.value.trim();
+            if (text === "") return;
+
+            let badgeHTML = "";
+            if (currentUserRole === "admin") badgeHTML = '<span class="badge admin">المدير</span>';
+            else if (currentUserRole === "VIP") badgeHTML = '<span class="badge VIP">VIP</span>';
+            else badgeHTML = '<span class="badge member">عضو</span>';
+
+            const msgDiv = document.createElement('div');
+            msgDiv.classList.add('msg');
+            msgDiv.innerHTML = `${badgeHTML} <strong>أنت:</strong> ${text}`;
+
+            messagesArea.appendChild(msgDiv);
+            msgInput.value = "";
+            messagesArea.scrollTop = messagesArea.scrollHeight;
+        }
+
+        sendBtn.addEventListener('click', sendMessage);
+        msgInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        micBtn.addEventListener('click', () => {
+            if (!isMicOn) {
+                isMicOn = true;
+                micBtn.textContent = "🛑 ترك المايك الحي";
+                micBtn.classList.add('active');
+                micStatus.textContent = "🎙️ أنت على المايك الآن.. الجميع يسمعك!";
+                micStatus.style.color = "#2ecc71";
+            } else {
+                isMicOn = false;
+                micBtn.textContent = "🎙️ طلب المايك الحي";
+                micBtn.classList.remove('active');
+                micStatus.textContent = "المايك متاح حالياً";
+                micStatus.style.color = "white";
+            }
+        });
+    </script>
 </body>
 </html>
