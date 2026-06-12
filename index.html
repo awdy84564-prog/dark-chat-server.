@@ -2,209 +2,50 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DARK CHAT ROOT</title>
-    <style>
-        body { margin: 0; padding: 0; background-color: #0b0e14; color: #e9edef; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        header { background-color: #1f2c34; padding: 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2a3942; }
-        .logo { font-size: 18px; font-weight: bold; color: #ff3333; }
-        .main-container { flex: 1; display: flex; height: calc(100vh - 60px); }
-        .sidebar { width: 220px; background: #111b21; border-left: 1px solid #2a3942; display: flex; flex-direction: column; padding: 10px; }
-        .chat-area { flex: 1; display: flex; flex-direction: column; background: #0b0e14; }
-        
-        .mic-bar { background: #182229; padding: 10px; display: flex; gap: 15px; border-bottom: 1px solid #2a3942; }
-        .mic-box { text-align: center; font-size: 12px; background: #202c33; padding: 5px; border-radius: 6px; min-width: 60px; cursor: pointer; border: 1px dashed #8696a0; }
-        .mic-taken { border: 1px solid #00a884; color: #00a884; font-weight: bold; }
-        
-        #messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
-        .msg { padding: 8px 12px; border-radius: 8px; max-width: 80%; font-size: 14px; }
-        .msg.me { background: #005c4b; align-self: flex-start; }
-        .msg.other { background: #202c33; align-self: flex-end; }
-        .msg.pvt { background: #511f54; border: 1px solid #a238a6; }
-        .msg.sys { background: #3a1d1d; color: #ff6666; align-self: center; text-align: center; width: 90%; }
-        
-        .input-bar { background: #1f2c34; padding: 10px; display: flex; gap: 8px; }
-        input { flex: 1; background: #2a3942; border: none; padding: 12px; border-radius: 20px; color: white; outline: none; }
-        button { background: #00a884; border: none; padding: 10px 18px; color: white; border-radius: 20px; font-weight: bold; cursor: pointer; }
-        
-        .room-btn { padding: 8px; background: #1f2c34; margin: 4px 0; border-radius: 4px; text-align: center; cursor: pointer; font-size: 14px; }
-        .admin-box { background: #291212; padding: 10px; border-radius: 6px; margin-top: auto; border: 1px solid #ff3333; display: none; }
-        .admin-box input, .admin-box button { width: 100%; margin: 3px 0; font-size: 12px; padding: 6px; border-radius: 4px; }
-        
-        /* واجهة الدخول المحمية بكلمة مرور */
-        #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0b0e14; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10000; }
-        .login-card { background: #111b21; padding: 25px; border-radius: 12px; border: 1px solid #2a3942; display: flex; flex-direction: column; width: 85%; max-width: 320px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-    </style>
-    <script src="/socket.io/socket.io.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>شاتنا محبتنا - غرفة الصوت والدردشة</title>
+    <!-- ربط ملف التصميم الخارجي -->
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <!-- شاشة قفل الدخول السري المحدثة بكلمة المرور -->
-    <div id="loginOverlay">
-        <div class="login-card">
-            <h2 style="color: #ff3333; text-align: center; margin-top: 0;">DARK CHAT ROOT</h2>
-            <p style="font-size: 12px; color: #8696a0; text-align: center; margin-bottom: 20px;">سجل دخولك لبدء المحادثة الفورية</p>
-            
-            <input type="text" id="nicknameInput" placeholder="أدخل اسمك المستعار..." style="margin-bottom: 12px; text-align: center;">
-            <input type="password" id="passwordInput" placeholder="كلمة المرور (للمسؤولين فقط)" style="margin-bottom: 20px; text-align: center;">
-            
-            <button onclick="startApp()">دخول السيرفر فوراً ⚡</button>
+    <div class="chat-container">
+        <!-- الهيدر العلوي وفيه نظام المايك الحي -->
+        <header class="chat-header">
+            <h2>💖 شاتنا محبتنا 💖</h2>
+            <div class="mic-section">
+                <button id="micBtn" class="btn-mic">🎙️ طلب المايك الحي</button>
+                <span id="micStatus" class="mic-status">المايك متاح حالياً</span>
+            </div>
+        </header>
+
+        <div class="chat-main">
+            <!-- ساحة الرسائل والدردشة -->
+            <section class="messages-area" id="messagesArea">
+                <div class="msg system">مرحباً بك في شاتنا محبتنا! التزم بالقوانين.</div>
+                <div class="msg"><span class="badge admin">المدير</span> <strong>أحمد:</strong> منورين الغرفة جميعاً!</div>
+                <div class="msg"><span class="badge VIP">VIP</span> <strong>سارة:</strong> مساء الخير والأناقة 🌸</div>
+            </section>
+
+            <!-- القائمة الجانبية للمتواجدين والرتب -->
+            <aside class="users-sidebar">
+                <h3>المتواجدون (<span id="userCount">3</span>)</h3>
+                <ul class="users-list">
+                    <li><span class="badge admin">المدير</span> أحمد <span class="online-dot"></span></li>
+                    <li><span class="badge VIP">VIP</span> سارة <span class="online-dot"></span></li>
+                    <li><span class="badge member">عضو</span> مستخدم_جديد <span class="online-dot"></span></li>
+                </ul>
+            </aside>
         </div>
+
+        <!-- شريط إرسال الرسائل السفلي -->
+        <footer class="chat-footer">
+            <input type="text" id="msgInput" placeholder="اكتب رسالتك المحببة هنا..." autocomplete="off">
+            <button id="sendBtn" class="btn-send">إرسال 🚀</button>
+        </footer>
     </div>
 
-    <header>
-        <div class="logo">DARK CHAT ROOT 🔒</div>
-        <div id="myStatus" style="font-size: 13px; color: #8696a0;">جاري الاتصال...</div>
-    </header>
-
-    <div class="main-container">
-        <div class="sidebar">
-            <h4 style="margin: 5px 0; color: #00a884;">📁 الغرف المستقلة</h4>
-            <div id="roomsContainer"></div>
-            
-            <div class="admin-box" id="adminPanel">
-                <p style="color: #ff3333; margin: 0 0 5px 0; font-weight: bold; font-size:12px;">🛠️ لوحة تحكم الـ ROOT</p>
-                <input type="text" id="adminTarget" placeholder="اسم المستخدم المستهدف">
-                <button onclick="sendAdminCmd('mute')" style="background: #e0a905;">كتم عضو</button>
-                <button onclick="sendAdminCmd('unmute')" style="background: #00a884;">فك كتم</button>
-                <button onclick="sendAdminCmd('kick')" style="background: #dd4b39;">طرد مؤقت</button>
-                <button onclick="sendAdminCmd('ban')" style="background: #ff0000;">حظر IP قطعي</button>
-                <hr style="border: 0.5px solid #ff3333; margin: 8px 0;">
-                <input type="text" id="newRoomName" placeholder="اسم غرفة جديدة">
-                <button onclick="sendAdminCmd('create_room')" style="background: #4a148c;">إنشاء غرفة</button>
-            </div>
-        </div>
-
-        <div class="chat-area">
-            <div class="mic-bar">
-                <div class="mic-box" id="mic0" onclick="claimMic(0)">🎙️ 1: فارغ</div>
-                <div class="mic-box" id="mic1" onclick="claimMic(1)">🎙️ 2: فارغ</div>
-                <div class="mic-box" id="mic2" onclick="claimMic(2)">🎙️ 3: فارغ</div>
-                <button onclick="releaseMic()" style="padding:5px 10px; font-size:11px; background:#555;">ترك المايك</button>
-            </div>
-
-            <div id="messages"></div>
-
-            <div class="input-bar">
-                <input type="text" id="msgInput" placeholder="اكتب رسالة عامة.. (أو اكتب 'اسم العضو: رسالتك' لإرسال خاص)">
-                <button onclick="send()">إرسال ◀</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const socket = io();
-        let myName = "";
-        let myRank = "";
-
-        function startApp() {
-            const name = document.getElementById('nicknameInput').value.trim();
-            const pass = document.getElementById('passwordInput').value.trim();
-            if(!name) return alert("الرجاء كتابة الاسم المستعار!");
-            
-            myName = name;
-            // إرسال الاسم وكلمة المرور للسيرفر معاً للفحص والتحقق الصارم
-            socket.emit('join_system', { username: name, password: pass });
-        }
-
-        socket.on('init_login', (data) => {
-            myRank = data.rank;
-            document.getElementById('myStatus').innerText = `${data.username} [${data.rank}]`;
-            
-            if(data.rank === "VIP ROOT") {
-                document.getElementById('adminPanel').style.display = "block";
-            }
-            document.getElementById('loginOverlay').style.display = "none";
-            updateRoomsList(data.roomsList);
-        });
-
-        socket.on('login_failed', (errorMsg) => {
-            alert(errorMsg);
-        });
-
-        function send() {
-            const input = document.getElementById('msgInput');
-            const val = input.value.trim();
-            if(!val) return;
-
-            if(val.includes(':')) {
-                const parts = val.split(':');
-                const targetUser = parts[0].trim();
-                const secretMsg = parts.slice(1).join(':').trim();
-                socket.emit('send_message', { isPrivate: true, target: targetUser, msg: secretMsg });
-            } else {
-                socket.emit('send_message', { isPrivate: false, msg: val });
-            }
-            input.value = "";
-        }
-
-        socket.on('receive_message', (data) => {
-            const container = document.getElementById('messages');
-            const div = document.createElement('div');
-            div.className = `msg ${data.username === myName ? 'me' : 'other'}`;
-            div.innerHTML = `<strong>[${data.rank}] ${data.username}:</strong> ${data.msg}`;
-            container.appendChild(div);
-            container.scrollTop = container.scrollHeight;
-        });
-
-        socket.on('receive_private', (data) => {
-            const container = document.getElementById('messages');
-            const div = document.createElement('div');
-            div.className = "msg pvt";
-            div.innerHTML = `🔐 <strong>[دردشة خاصة سرية] ${data.from}:</strong> ${data.msg}`;
-            container.appendChild(div);
-            container.scrollTop = container.scrollHeight;
-        });
-
-        socket.on('sys_alert', (msg) => {
-            const container = document.getElementById('messages');
-            const div = document.createElement('div');
-            div.className = "msg sys";
-            div.innerText = msg;
-            container.appendChild(div);
-        });
-
-        socket.on('sys_error', (msg) => { alert(msg); });
-        socket.on('banned', (msg) => { alert(msg); window.location.reload(); });
-        socket.on('kicked_out', (msg) => { alert(msg); socket.emit('switch_room', 'العامة'); });
-
-        function claimMic(index) { socket.emit('request_mic', index); }
-        function releaseMic() { socket.emit('leave_mic'); }
-        
-        socket.on('update_mics', (mics) => {
-            for(let i=0; i<3; i++) {
-                const el = document.getElementById(`mic${i}`);
-                if(mics[i]) {
-                    el.innerText = `🎙️ ${i+1}: ${mics[i]}`;
-                    el.classList.add('mic-taken');
-                } else {
-                    el.innerText = `🎙️ ${i+1}: فارغ`;
-                    el.classList.remove('mic-taken');
-                }
-            }
-        });
-
-        function updateRoomsList(list) {
-            const container = document.getElementById('roomsContainer');
-            container.innerHTML = "";
-            list.forEach(room => {
-                const div = document.createElement('div');
-                div.className = "room-btn";
-                div.innerText = `💬 ${room}`;
-                div.onclick = () => socket.emit('switch_room', room);
-                container.appendChild(div);
-            });
-        }
-        socket.on('update_room_list', (list) => updateRoomsList(list));
-
-        // تنفيذ أوامر الإدارة العليا للـ ROOT
-        function sendAdminCmd(action) {
-            const target = document.getElementById('adminTarget').value.trim();
-            const roomName = document.getElementById('newRoomName').value.trim();
-            socket.emit('admin_command', { action, target, roomName });
-            document.getElementById('adminTarget').value = "";
-            document.getElementById('newRoomName').value = "";
-        }
-    </script>
+    <!-- ربط ملف البرمجة الخارجي -->
+    <script src="script.js"></script>
 </body>
 </html>
