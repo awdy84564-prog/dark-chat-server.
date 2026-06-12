@@ -1,0 +1,80 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f5f6fa;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+/* صندوق الشات الرئيسي */
+.chat-container {
+    width: 900px;
+    height: 600px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* الجزء العلوي والمايك */
+.chat-header {
+    background: linear-gradient(135deg, #ff7675, #d63031);
+    color: white;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 3px solid #b2bec3;
+}
+
+.chat-header h2 { margin: 0; font-size: 1.6rem; }
+
+.btn-mic {
+    background-color: #ffeaa7;
+    border: none;
+    padding: 10px 15px;
+    font-weight: bold;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+.btn-mic.active { background-color: #2ecc71; color: white; animation: pulse 1s infinite; }
+.mic-status { margin-right: 10px; font-size: 0.9rem; font-style: italic; }
+
+/* ساحة المحادثة والقائمة الجانبية */
+.chat-main { display: flex; flex: 1; overflow: hidden; }
+
+.messages-area { flex: 3; padding: 20px; overflow-y: auto; background: #fafafa; }
+
+.users-sidebar { flex: 1; background: #2d3436; color: white; padding: 15px; border-right: 2px solid #dfe6e9; }
+.users-sidebar h3 { margin-top: 0; border-bottom: 1px solid #636e72; padding-bottom: 5px; }
+.users-list { list-style: none; padding: 0; }
+.users-list li { padding: 8px 0; display: flex; align-items: center; justify-content: space-between; }
+
+/* نظام الرتب والصلاحيات (الأوسمة) */
+.badge { padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; color: white; margin-left: 5px; }
+.badge.admin { background-color: #d63031; }
+.badge.VIP { background-color: #fdcb6e; color: #2d3436; }
+.badge.member { background-color: #0984e3; }
+
+.online-dot { width: 10px; height: 10px; background-color: #2ecc71; border-radius: 50%; }
+
+/* الرسائل */
+.msg { margin-bottom: 15px; font-size: 1rem; line-height: 1.4; }
+.msg.system { color: #7f8c8d; text-align: center; font-style: italic; font-size: 0.9rem; }
+
+/* شريط الإرسال السفلي */
+.chat-footer { padding: 15px; background: #f1f2f6; display: flex; gap: 10px; }
+.chat-footer input { flex: 1; padding: 12px; border: 1px solid #ced6e0; border-radius: 8px; font-size: 1rem; outline: none; }
+.btn-send { background: #d63031; color: white; border: none; padding: 0 25px; border-radius: 8px; font-size: 1rem; cursor: pointer; }
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
